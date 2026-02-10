@@ -20,6 +20,10 @@ function Navbar() {
 
         <Link to="/">Home</Link>
 
+        {!user && (
+          <Link to="/explore">Explore</Link>
+        )}
+
         {user?.role === "user" && (
           <>
             <Link to="/explore">Explore</Link>

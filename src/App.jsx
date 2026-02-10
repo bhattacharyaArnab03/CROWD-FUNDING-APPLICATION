@@ -6,6 +6,7 @@ import Admin from "./pages/Admin";
 import Explore from "./pages/Explore";
 import Payment from "./pages/Payment";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Home from "./pages/Home";
 
 function App() {
   return (
@@ -13,9 +14,11 @@ function App() {
       <Navbar />
 
       <Routes>
-        <Route path="/" element={<Explore />} />
+        <Route path="/" element={<Home />} />
 
         <Route path="/auth" element={<Auth />} />
+
+        <Route path="/explore" element={<Explore />} />
 
         <Route
           path="/dashboard"
@@ -31,15 +34,6 @@ function App() {
           element={
             <ProtectedRoute role="admin">
               <Admin />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/explore"
-          element={
-            <ProtectedRoute role="user">
-              <Explore />
             </ProtectedRoute>
           }
         />
