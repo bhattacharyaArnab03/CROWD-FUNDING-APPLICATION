@@ -1,0 +1,61 @@
+.home-container {
+  font-family: Arial, sans-serif;
+}
+
+/* HERO SECTION */
+.hero {
+  background: linear-gradient(135deg, #1e3a8a, #0f172a);
+  color: white;
+  padding: 100px 20px;
+  text-align: center;
+}
+
+.hero-content {
+  max-width: 750px;
+  margin: auto;
+}
+
+.hero h1 {
+  font-size: 44px;
+  margin-bottom: 20px;
+  font-weight: 800;
+}
+
+.hero p {
+  font-size: 18px;
+  margin-bottom: 35px;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+/* BUTTON CONTAINER */
+.hero-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+}
+
+/* BUTTON BASE */
+.btn {
+  padding: 14px 30px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 700;
+  border: 2px solid white;
+  background-color: transparent;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+/* Hover Effect */
+.btn:hover {
+  background-color: white;
+  color: #0f172a;
+}
+
+/* ACTIVE TOGGLE */
+.btn.active {
+  background-color: #38bdf8;
+  color: #0f172a;
+  border-color: #38bdf8;
+}

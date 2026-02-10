@@ -1,0 +1,95 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 60px;
+  background-color: #0f172a;   /* Professional deep navy */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Logo */
+.logo {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+/* Links */
+.nav-links a {
+  margin-left: 35px;
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 700;
+  color: #e2e8f0;
+  transition: 0.3s ease;
+  position: relative;
+}
+
+/* Hover color */
+.nav-links a:hover {
+  color: #38bdf8;  /* Elegant cyan accent */
+}
+
+/* Animated underline */
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 0%;
+  height: 2px;
+  background-color: #38bdf8;
+  transition: 0.3s ease;
+}
+
+.nav-links a:hover::after {
+  width: 100%;
+}
+
+/* AUTH BUTTON */
+.auth-btn-nav {
+  margin-left: 35px;
+  padding: 10px 22px;
+  border-radius: 10px;
+  background-color: #38bdf8;
+  color: #0f172a !important;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 18px rgba(56, 189, 248, 0.3);
+}
+
+.auth-btn-nav:hover {
+  background-color: #0ea5e9;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(56, 189, 248, 0.4);
+}
+
+.profile-link {
+  margin-left: 30px;
+  font-weight: 700;
+  color: #e2e8f0;
+  text-decoration: none;
+  transition: 0.3s ease;
+}
+
+.profile-link:hover {
+  color: #38bdf8;
+}
+
+.logout-btn {
+  margin-left: 20px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background-color: #ef4444;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.logout-btn:hover {
+  background-color: #dc2626;
+}

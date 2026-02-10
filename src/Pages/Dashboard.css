@@ -1,0 +1,106 @@
+/* PAGE STRUCTURE (Same as Explore) */
+.dashboard-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.25), transparent 40%),
+    radial-gradient(circle at 80% 15%, rgba(99, 102, 241, 0.25), transparent 40%),
+    linear-gradient(to bottom, #0f172a 0%, #e2e8f0 45%);
+}
+
+
+/* HERO */
+.dashboard-hero {
+  padding: 80px 20px 100px 20px;
+  text-align: center;
+  color: white;
+}
+
+.dashboard-hero h1 {
+  font-size: 42px;
+  font-weight: 800;
+  margin-bottom: 15px;
+}
+
+.dashboard-hero p {
+  font-size: 18px;
+  color: #94a3b8;
+}
+
+/* MAIN SECTION (Layered like Explore) */
+.dashboard-section {
+  padding: 0 80px 80px 80px;
+  margin-top: -60px;
+}
+
+/* STATS GRID */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 40px;
+  margin-bottom: 50px;
+}
+
+/* STAT CARD (Same Elevation Style as Campaign Card) */
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.15);
+}
+
+.stat-card h3 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.stat-card p {
+  font-size: 14px;
+  color: #64748b;
+}
+
+/* ACTIVITY */
+.activity-section h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #0f172a;
+}
+
+.activity-card {
+  background: white;
+  padding: 20px 25px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: 0.3s ease;
+}
+
+.activity-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 25px rgba(15, 23, 42, 0.1);
+}
+
+.activity-card p {
+  font-size: 14px;
+  color: #334155;
+}
+
+.activity-card span {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+body {
+  background-color: #0f172a;
+}
