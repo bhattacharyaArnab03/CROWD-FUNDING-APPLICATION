@@ -54,6 +54,30 @@ router.post("/", async (req, res) => {
   res.status(201).json(saved);
 });
 
+router.put("/:id", async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign) return res.status(404).json({ message: "Campaign not found." });
+
+    const { name, description, goal, deadline, raised, status } = req.body;
+
+    if (name) campaign.title = name;
+    if (description) campaign.description = description;
+    if (goal !== undefined) campaign.goal = Number(goal);
+    if (deadline) campaign.deadline = new Date(deadline);
+    if (raised !== undefined) campaign.raised = Number(raised);
+    if (status) campaign.status = status;
+
+    campaign.progress = campaign.goal > 0 ? Math.min(100, Math.round((campaign.raised / campaign.goal) * 100)) : 0;
+
+    await campaign.save();
+    res.json(campaign);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: "Failed to update campaign.", error: err.message });
+  }
+});
+
 router.post("/:id/donate", async (req, res) => {
   try {
     const campaign = await Campaign.findById(req.params.id);

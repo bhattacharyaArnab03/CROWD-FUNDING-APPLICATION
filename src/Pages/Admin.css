@@ -213,6 +213,33 @@
   font-weight: 600;
 }
 
+.save-btn {
+  background-color: #22c55e;
+  color: white;
+}
+
+.save-btn:hover {
+  background-color: #16a34a;
+}
+
+.cancel-btn {
+  background-color: #ef4444;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background-color: #dc2626;
+}
+
+.edit-btn {
+  background-color: #0f172a;
+  color: white;
+}
+
+.edit-btn:hover {
+  background-color: #1e3a8a;
+}
+
 .raise-btn {
   background-color: #22c55e;
   color: white;

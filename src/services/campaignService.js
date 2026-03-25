@@ -18,3 +18,13 @@ export async function donateToCampaign(id, amount) {
   });
   return response.data;
 }
+
+export async function createCampaign(campaignData) {
+  const response = await axios.post(`${API_BASE}/api/campaigns`, campaignData);
+  return response.data;
+}
+
+export async function updateCampaign(id, updates) {
+  const response = await axios.put(`${API_BASE}/api/campaigns/${id}`, updates);
+  return response.data;
+}
