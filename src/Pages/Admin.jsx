@@ -9,9 +9,17 @@ function Admin() {
   const [goal, setGoal] = useState("");
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [error, setError] = useState("");
+
+  const today = new Date().toISOString().split("T")[0];
 
   const handleCreate = (e) => {
     e.preventDefault();
+
+    if (!deadline || deadline < today) {
+      setError("Please select today or a future date for campaign deadline.");
+      return;
+    }
 
     const newEvent = {
       id: Date.now(),
@@ -64,9 +72,15 @@ function Admin() {
             <input
               type="date"
               value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
+              min={today}
+              onChange={(e) => {
+                setDeadline(e.target.value);
+                setError("");
+              }}
               required
             />
+
+            {error && <p className="admin-error">{error}</p>}
 
             <input
               type="text"
