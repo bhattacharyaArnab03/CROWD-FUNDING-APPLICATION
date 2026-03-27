@@ -12,9 +12,29 @@ const router = Router();
 const calculateProgress = (campaign) =>
   Math.min(100, Math.round((campaign.raised / campaign.goal) * 100));
 
+// Update campaign statuses before returning
 router.get("/", async (req, res) => {
-  const campaigns = await Campaign.find().lean();
-  res.json(campaigns);
+  const now = new Date();
+  const campaigns = await Campaign.find();
+  for (const campaign of campaigns) {
+    if (campaign.status !== "Cancelled" && campaign.status !== "Completed") {
+      if (campaign.raised >= campaign.goal) {
+        if (campaign.status !== "Completed") {
+          campaign.status = "Completed";
+          await campaign.save();
+        }
+      } else if (campaign.deadline < now) {
+        if (campaign.status !== "Overdue") {
+          campaign.status = "Overdue";
+          await campaign.save();
+        }
+      } else if (campaign.status !== "Active") {
+        campaign.status = "Active";
+        await campaign.save();
+      }
+    }
+  }
+  res.json(campaigns.map(c => c.toObject()));
 });
 
 router.get("/:id", async (req, res) => {
@@ -103,8 +123,26 @@ router.post("/:id/donate", async (req, res) => {
 
     campaign.raised += donationAmount;
     campaign.progress = calculateProgress(campaign);
-    campaign.status = campaign.raised >= campaign.goal ? "Funded" : "Active";
+    if (campaign.raised >= campaign.goal) {
+      campaign.status = "Completed";
+    } else if (campaign.deadline < new Date()) {
+      campaign.status = "Overdue";
+    } else {
+      campaign.status = "Active";
+    }
     await campaign.save();
+// Admin: Cancel a campaign
+router.post("/:id/cancel", async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign) return res.status(404).json({ message: "Campaign not found." });
+    campaign.status = "Cancelled";
+    await campaign.save();
+    res.json({ message: "Campaign cancelled.", campaign });
+  } catch (err) {
+    res.status(400).json({ message: "Failed to cancel campaign.", error: err.message });
+  }
+});
 
     user.totalDonated += donationAmount;
     await user.save();

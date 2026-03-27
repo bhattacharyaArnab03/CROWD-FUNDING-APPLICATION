@@ -8,6 +8,15 @@ import {
 
 export const CampaignContext = createContext();
 
+
+// Helper to normalize campaign objects
+const normalizeCampaign = (campaign) => ({
+  ...campaign,
+  name: campaign.name || campaign.title || "Untitled Campaign",
+  id: campaign.id || campaign._id,
+  _id: campaign._id || campaign.id,
+});
+
 export function CampaignProvider({ children }) {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,14 +27,7 @@ export function CampaignProvider({ children }) {
       setLoading(true);
       try {
         const data = await fetchCampaigns();
-        setCampaigns(
-          data.map((campaign) => ({
-            ...campaign,
-            name: campaign.name || campaign.title || "Untitled Campaign",
-            id: campaign.id || campaign._id,
-            _id: campaign._id || campaign.id,
-          }))
-        );
+        setCampaigns(data.map(normalizeCampaign));
       } catch (err) {
         setError(err.message || "Failed to load campaigns");
       } finally {
@@ -46,11 +48,7 @@ export function CampaignProvider({ children }) {
         image: campaign.image || "",
       });
 
-      setCampaigns((prev) => [...prev, {
-        ...saved,
-        name: saved.name || saved.title,
-        id: saved._id || saved.id,
-      }]);
+      setCampaigns((prev) => [...prev, normalizeCampaign(saved)]);
       return saved;
     } catch (err) {
       throw err;
@@ -121,7 +119,7 @@ export function CampaignProvider({ children }) {
       const data = await getUserDonations({ userId: user.id || user._id, userEmail: user.email });
       setDonations(data);
     } catch (err) {
-      // Optionally handle error
+      setError(err.message || "Failed to fetch donations");
     }
   };
 
