@@ -1,12 +1,26 @@
+nav {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 40px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
 nav a {
   margin-right: 15px;
+  margin-left: 20px;
   text-decoration: none;
+  font-weight: 500;
+  color: #333;
+}
+
+nav a:hover {
+  color: #2a5298;
 }
 
 .card {
   border: 1px solid #ccc;
-  padding: 10px;
-  margin: 10px 0;
+  padding: 10px;  margin: 10px 0;
 }
 
 .progress {
@@ -18,23 +32,4 @@ nav a {
 .fill {
   height: 100%;
   background-color: green;
-}
-
-nav {
-  display: flex;
-  justify-content: space-between;
-  padding: 15px 40px;
-  background-color: #ffffff;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-nav a {
-  margin-left: 20px;
-  text-decoration: none;
-  font-weight: 500;
-  color: #333;
-}
-
-nav a:hover {
-  color: #2a5298;
 }
