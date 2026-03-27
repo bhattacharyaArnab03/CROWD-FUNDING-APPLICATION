@@ -1,34 +1,99 @@
 import { useState, useContext } from "react";
 import { CampaignContext } from "../context/CampaignContext";
+import { updateCampaign as updateCampaignApi } from "../services/campaignService";
 import "./Admin.css";
 
 function Admin() {
-  const { campaigns, addCampaign } = useContext(CampaignContext);
+  const { campaigns, addCampaign, updateCampaign } = useContext(CampaignContext);
 
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [error, setError] = useState("");
 
-  const handleCreate = (e) => {
+  const [editingCampaignId, setEditingCampaignId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editGoal, setEditGoal] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editDeadline, setEditDeadline] = useState("");
+  const [editRaised, setEditRaised] = useState("");
+
+  const [editError, setEditError] = useState("");
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const handleCreate = async (e) => {
     e.preventDefault();
 
+    if (!deadline || deadline < today) {
+      setError("Please select today or a future date for campaign deadline.");
+      return;
+    }
+
+    setError("");
     const newEvent = {
-      id: Date.now(),
       name,
       description,
       goal: Number(goal),
       raised: 0,
       deadline,
-      status: "Active"
+      status: "Active",
     };
 
-    addCampaign(newEvent);
+    try {
+      await addCampaign(newEvent);
+      setName("");
+      setGoal("");
+      setDescription("");
+      setDeadline("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to create campaign. Please try again.");
+    }
+  };
 
-    setName("");
-    setGoal("");
-    setDescription("");
-    setDeadline("");
+  const startEditCampaign = (campaign) => {
+    setEditingCampaignId(campaign.id || campaign._id);
+    setEditName(campaign.name || campaign.title || "");
+    setEditGoal(campaign.goal);
+    setEditDescription(campaign.description);
+    setEditDeadline(campaign.deadline ? campaign.deadline.toString().slice(0, 10) : "");
+    setEditRaised(campaign.raised);
+    setEditError("");
+  };
+
+  const cancelEdit = () => {
+    setEditingCampaignId(null);
+    setEditError("");
+  };
+
+  const saveEditCampaign = async (campaignId) => {
+    if (!editName || !editDescription || !editDeadline || !editGoal) {
+      setEditError("All fields are required when updating campaign details.");
+      return;
+    }
+
+    if (editDeadline < today) {
+      setEditError("Deadline must be today or in the future.");
+      return;
+    }
+
+    const updates = {
+      name: editName,
+      description: editDescription,
+      goal: Number(editGoal),
+      deadline: editDeadline,
+      raised: Number(editRaised),
+    };
+
+    try {
+      await updateCampaignApi(campaignId, updates);
+      updateCampaign(campaignId, updates);
+      setEditingCampaignId(null);
+      setEditError("");
+    } catch (err) {
+      setEditError(err.response?.data?.message || "Unable to update campaign currently.");
+    }
   };
 
   return (
@@ -64,9 +129,15 @@ function Admin() {
             <input
               type="date"
               value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
+              min={today}
+              onChange={(e) => {
+                setDeadline(e.target.value);
+                setError("");
+              }}
               required
             />
+
+            {error && <p className="admin-error">{error}</p>}
 
             <input
               type="text"
@@ -88,9 +159,57 @@ function Admin() {
                 ? (campaign.raised / campaign.goal) * 100
                 : 0;
 
-            return (
-              <div className="admin-card" key={campaign.id}>
+            const campaignId = campaign.id || campaign._id;
 
+            if (editingCampaignId === String(campaignId)) {
+              return (
+                <div className="admin-card" key={campaignId}>
+                  <h3>Editing: {campaign.name}</h3>
+                  <form className="admin-form" onSubmit={(e) => {e.preventDefault(); saveEditCampaign(campaignId);}}>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      required
+                    />
+                    <input
+                      type="number"
+                      value={editGoal}
+                      onChange={(e) => setEditGoal(e.target.value)}
+                      required
+                    />
+                    <input
+                      type="date"
+                      min={today}
+                      value={editDeadline}
+                      onChange={(e) => setEditDeadline(e.target.value)}
+                      required
+                    />
+                    <input
+                      type="text"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      required
+                    />
+                    <input
+                      type="number"
+                      value={editRaised}
+                      onChange={(e) => setEditRaised(e.target.value)}
+                      min="0"
+                      required
+                    />
+                    {editError && <p className="admin-error">{editError}</p>}
+                    <div className="card-actions">
+                      <button type="submit" className="save-btn">Save</button>
+                      <button type="button" className="cancel-btn" onClick={cancelEdit}>Cancel</button>
+                    </div>
+                  </form>
+                </div>
+              );
+            }
+
+            return (
+              <div className="admin-card" key={campaignId}>
                 <div className="card-header">
                   <h3>{campaign.name}</h3>
                   <span className={`status ${campaign.status.toLowerCase()}`}>
@@ -98,13 +217,8 @@ function Admin() {
                   </span>
                 </div>
 
-                <p className="description">
-                  {campaign.description}
-                </p>
-
-                <p className="deadline">
-                  Deadline: {campaign.deadline}
-                </p>
+                <p className="description">{campaign.description}</p>
+                <p className="deadline">Deadline: {campaign.deadline}</p>
 
                 {/* Progress */}
                 <div className="progress-bar">
@@ -119,6 +233,11 @@ function Admin() {
                   <span>₹{campaign.goal}</span>
                 </div>
 
+                <div className="card-actions">
+                  <button type="button" className="edit-btn" onClick={() => startEditCampaign(campaign)}>
+                    Edit Campaign
+                  </button>
+                </div>
               </div>
             );
           })}

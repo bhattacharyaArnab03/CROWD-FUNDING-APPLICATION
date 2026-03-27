@@ -1,79 +1,113 @@
-import { createContext, useState } from "react";
+import { createContext, useEffect, useState } from "react";
+import {
+  getCampaigns as fetchCampaigns,
+  donateToCampaign as donateApi,
+  createCampaign as createCampaignApi,
+} from "../services/campaignService";
 
 export const CampaignContext = createContext();
 
 export function CampaignProvider({ children }) {
+  const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [campaigns, setCampaigns] = useState([
-    {
-      id: 1,
-      name: "Save the Forests",
-      description: "Plant 10,000 trees in deforested regions.",
-      goal: 50000,
-      raised: 12000,
-      deadline: "2026-03-30",
-      status: "Active"
-    },
-    {
-      id: 2,
-      name: "Clean Water Initiative",
-      description: "Provide clean drinking water to rural villages.",
-      goal: 80000,
-      raised: 45000,
-      deadline: "2026-04-15",
-      status: "Active"
-    },
-    {
-      id: 3,
-      name: "Education for All",
-      description: "Fund school supplies for underprivileged children.",
-      goal: 30000,
-      raised: 30000,
-      deadline: "2026-02-28",
-      status: "Funded"
+  useEffect(() => {
+    const loadCampaigns = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchCampaigns();
+        setCampaigns(
+          data.map((campaign) => ({
+            ...campaign,
+            name: campaign.name || campaign.title || "Untitled Campaign",
+          }))
+        );
+      } catch (err) {
+        setError(err.message || "Failed to load campaigns");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCampaigns();
+  }, []);
+
+  const addCampaign = async (campaign) => {
+    try {
+      const saved = await createCampaignApi({
+        title: campaign.name || campaign.title,
+        description: campaign.description,
+        goal: Number(campaign.goal),
+        deadline: campaign.deadline,
+        image: campaign.image || "",
+      });
+
+      setCampaigns((prev) => [...prev, {
+        ...saved,
+        name: saved.name || saved.title,
+        id: saved._id || saved.id,
+      }]);
+      return saved;
+    } catch (err) {
+      throw err;
     }
-  ]);
+  };
+
+  const updateCampaign = (id, updates) => {
+    setCampaigns((prev) =>
+      prev.map((c) => {
+        const campaignId = c.id || c._id || "";
+        if (String(campaignId) === String(id)) {
+          return {
+            ...c,
+            ...updates,
+            name: updates.name || updates.title || c.name,
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  const getCampaignById = (id) => {
+    return campaigns.find((c) => String(c.id || c._id) === String(id));
+  };
+
+  const donateToCampaign = async (id, amount, user) => {
+    const resp = await donateApi(id, amount);
+    setCampaigns((prev) =>
+      prev.map((c) => (c.id === resp.id ? { ...c, ...resp } : c))
+    );
+
+    if (user) {
+      const donationRecord = {
+        campaignId: id,
+        campaignName: resp.name || getCampaignById(id)?.name,
+        amount: Number(amount),
+        userEmail: user.email,
+        date: new Date().toLocaleString(),
+      };
+      setDonations((prev) => [...prev, donationRecord]);
+    }
+
+    return resp;
+  };
 
   const [donations, setDonations] = useState([]);
 
-  const addCampaign = (campaign) => {
-    setCampaigns([...campaigns, campaign]);
-  };
-
-  const donateToCampaign = (id, amount, user) => {
-    const updatedAmount = Number(amount);
-
-    setCampaigns(
-      campaigns.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              raised: c.raised + updatedAmount,
-              status:
-                c.raised + updatedAmount >= c.goal
-                  ? "Funded"
-                  : c.status
-            }
-          : c
-      )
-    );
-
-    setDonations([
-      ...donations,
-      {
-        campaignId: id,
-        campaignName:
-          campaigns.find((c) => c.id === id)?.name,
-        amount: updatedAmount,
-        userEmail: user.email,
-        date: new Date().toLocaleString()
-      }
-    ]);
-  };
-
   return (
     <CampaignContext.Provider
-      value={{ campaigns, addCampaign, donateToCampaign, donations }}
+      value={{
+        campaigns,
+        loading,
+        error,
+        addCampaign,
+        updateCampaign,
+        donateToCampaign,
+        getCampaignById,
+        donations,
+      }}
     >
       {children}
     </CampaignContext.Provider>
