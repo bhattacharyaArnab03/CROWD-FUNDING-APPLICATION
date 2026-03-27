@@ -1,5 +1,7 @@
 import { Router } from "express";
+
 import User from "../models/User.js";
+import { generateTransactionNumber } from "../utils/generateTransactionNumber.js";
 
 const router = Router();
 
@@ -13,8 +15,9 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ message: "User already exists" });
   }
 
+
   const user = new User({
-    transactionNumber: `TXN-${Math.floor(Math.random() * 1000000)}`,
+    transactionNumber: generateTransactionNumber(),
     name,
     email,
     password,

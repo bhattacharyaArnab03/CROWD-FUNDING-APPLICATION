@@ -1,8 +1,11 @@
 import { Router } from "express";
 import Campaign from "../models/Campaign.js";
 import Donation from "../models/Donation.js";
+
 import Payment from "../models/Payment.js";
 import User from "../models/User.js";
+import { generateTransactionNumber, generatePaymentTransactionId } from "../utils/generateTransactionNumber.js";
+import { updateCampaignFields } from "../services/campaignService.js";
 
 const router = Router();
 
@@ -59,17 +62,7 @@ router.put("/:id", async (req, res) => {
     const campaign = await Campaign.findById(req.params.id);
     if (!campaign) return res.status(404).json({ message: "Campaign not found." });
 
-    const { name, description, goal, deadline, raised, status } = req.body;
-
-    if (name) campaign.title = name;
-    if (description) campaign.description = description;
-    if (goal !== undefined) campaign.goal = Number(goal);
-    if (deadline) campaign.deadline = new Date(deadline);
-    if (raised !== undefined) campaign.raised = Number(raised);
-    if (status) campaign.status = status;
-
-    campaign.progress = campaign.goal > 0 ? Math.min(100, Math.round((campaign.raised / campaign.goal) * 100)) : 0;
-
+    await updateCampaignFields(campaign, req.body);
     await campaign.save();
     res.json(campaign);
   } catch (err) {
@@ -93,8 +86,9 @@ router.post("/:id/donate", async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found." });
 
+
     const donation = new Donation({
-      transactionNumber: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+      transactionNumber: generateTransactionNumber(),
       amount: donationAmount,
       remarks: req.body.remarks || "",
       paymentMethod,
@@ -102,7 +96,7 @@ router.post("/:id/donate", async (req, res) => {
       userId: user._id,
       userEmail: userEmail || user.email,
       paymentStatus: "Completed",
-      transactionId: `PAY-${Math.floor(100000 + Math.random() * 900000)}`,
+      transactionId: generatePaymentTransactionId(),
     });
 
     const savedDonation = await donation.save();

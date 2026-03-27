@@ -1,5 +1,7 @@
 import { connectDB } from "./config/db.js";
+
 import User from "./models/User.js";
+import { generateTransactionNumber } from "./utils/generateTransactionNumber.js";
 
 const ensureAdmin = async () => {
   await connectDB();
@@ -11,8 +13,9 @@ const ensureAdmin = async () => {
     process.exit(0);
   }
 
+
   const admin = new User({
-    transactionNumber: `TXN-${Math.floor(Math.random() * 1000000)}`,
+    transactionNumber: generateTransactionNumber(),
     name: "Admin User",
     email,
     password: "Admin123!",

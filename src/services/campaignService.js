@@ -12,9 +12,11 @@ export async function getCampaignById(id) {
   return response.data;
 }
 
-export async function donateToCampaign(id, amount) {
+export async function donateToCampaign(id, amount, user) {
   const response = await axios.post(`${API_BASE}/api/campaigns/${id}/donate`, {
     amount,
+    userId: user?.id || user?._id,
+    userEmail: user?.email,
   });
   return response.data;
 }

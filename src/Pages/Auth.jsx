@@ -102,9 +102,10 @@ function Auth() {
               className="auth-form"
               onSubmit={async (e) => {
                 e.preventDefault();
-                const name = e.target[0].value;
-                const email = e.target[1].value;
-                const password = e.target[2].value;
+                const formData = new FormData(e.target);
+                const name = formData.get("name");
+                const email = formData.get("email");
+                const password = formData.get("password");
 
                 try {
                   const res = await axios.post(`${API_BASE}/api/auth/register`, {
@@ -131,9 +132,9 @@ function Auth() {
                 Already have account? Sign In
               </button>
               <h2>Create Account</h2>
-              <input type="text" placeholder="Full Name" required />
-              <input type="email" placeholder="Email" required />
-              <input type="password" placeholder="Password" required />
+              <input type="text" name="name" placeholder="Full Name" required />
+              <input type="email" name="email" placeholder="Email" required />
+              <input type="password" name="password" placeholder="Password" required />
               <button type="submit" className="auth-btn">
                 Register
               </button>

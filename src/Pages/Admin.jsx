@@ -191,13 +191,7 @@ function Admin() {
                       onChange={(e) => setEditDescription(e.target.value)}
                       required
                     />
-                    <input
-                      type="number"
-                      value={editRaised}
-                      onChange={(e) => setEditRaised(e.target.value)}
-                      min="0"
-                      required
-                    />
+                    {/* Removed the 'raised' input field as requested */}
                     {editError && <p className="admin-error">{editError}</p>}
                     <div className="card-actions">
                       <button type="submit" className="save-btn">Save</button>

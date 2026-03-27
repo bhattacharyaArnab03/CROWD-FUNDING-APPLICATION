@@ -75,15 +75,21 @@ export function CampaignProvider({ children }) {
   };
 
   const donateToCampaign = async (id, amount, user) => {
-    const resp = await donateApi(id, amount);
+    const resp = await donateApi(id, amount, user);
+    // resp.campaign is the updated campaign from backend
+    const updatedCampaign = resp.campaign || resp;
     setCampaigns((prev) =>
-      prev.map((c) => (c.id === resp.id ? { ...c, ...resp } : c))
+      prev.map((c) =>
+        String(c.id || c._id) === String(updatedCampaign.id || updatedCampaign._id)
+          ? { ...c, ...updatedCampaign, name: updatedCampaign.name || updatedCampaign.title || c.name }
+          : c
+      )
     );
 
     if (user) {
       const donationRecord = {
         campaignId: id,
-        campaignName: resp.name || getCampaignById(id)?.name,
+        campaignName: updatedCampaign.name || getCampaignById(id)?.name,
         amount: Number(amount),
         userEmail: user.email,
         date: new Date().toLocaleString(),
