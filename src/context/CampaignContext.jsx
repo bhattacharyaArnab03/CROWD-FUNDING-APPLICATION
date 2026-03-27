@@ -3,6 +3,7 @@ import {
   getCampaigns as fetchCampaigns,
   donateToCampaign as donateApi,
   createCampaign as createCampaignApi,
+  getUserDonations,
 } from "../services/campaignService";
 
 export const CampaignContext = createContext();
@@ -21,6 +22,8 @@ export function CampaignProvider({ children }) {
           data.map((campaign) => ({
             ...campaign,
             name: campaign.name || campaign.title || "Untitled Campaign",
+            id: campaign.id || campaign._id,
+            _id: campaign._id || campaign.id,
           }))
         );
       } catch (err) {
@@ -79,11 +82,20 @@ export function CampaignProvider({ children }) {
     // resp.campaign is the updated campaign from backend
     const updatedCampaign = resp.campaign || resp;
     setCampaigns((prev) =>
-      prev.map((c) =>
-        String(c.id || c._id) === String(updatedCampaign.id || updatedCampaign._id)
-          ? { ...c, ...updatedCampaign, name: updatedCampaign.name || updatedCampaign.title || c.name }
-          : c
-      )
+      prev.map((c) => {
+        const prevId = String(c.id || c._id);
+        const newId = String(updatedCampaign.id || updatedCampaign._id);
+        if (prevId === newId) {
+          return {
+            ...c,
+            ...updatedCampaign,
+            id: updatedCampaign.id || updatedCampaign._id || c.id || c._id,
+            _id: updatedCampaign._id || updatedCampaign.id || c._id || c.id,
+            name: updatedCampaign.name || updatedCampaign.title || c.name,
+          };
+        }
+        return c;
+      })
     );
 
     if (user) {
@@ -102,6 +114,17 @@ export function CampaignProvider({ children }) {
 
   const [donations, setDonations] = useState([]);
 
+  // Fetch user donations from backend
+  const fetchDonationsForUser = async (user) => {
+    if (!user) return;
+    try {
+      const data = await getUserDonations({ userId: user.id || user._id, userEmail: user.email });
+      setDonations(data);
+    } catch (err) {
+      // Optionally handle error
+    }
+  };
+
   return (
     <CampaignContext.Provider
       value={{
@@ -113,6 +136,7 @@ export function CampaignProvider({ children }) {
         donateToCampaign,
         getCampaignById,
         donations,
+        fetchDonationsForUser,
       }}
     >
       {children}

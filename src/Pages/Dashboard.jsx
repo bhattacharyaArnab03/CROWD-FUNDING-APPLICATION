@@ -1,11 +1,16 @@
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { CampaignContext } from "../context/CampaignContext";
 import "./Dashboard.css";
 
+
 function Dashboard() {
   const { user } = useContext(AuthContext);
-  const { donations } = useContext(CampaignContext);
+  const { donations, fetchDonationsForUser } = useContext(CampaignContext);
+
+  useEffect(() => {
+    fetchDonationsForUser && fetchDonationsForUser(user);
+  }, [user]);
 
   const userDonations = donations.filter(
     (d) => d.userEmail === user?.email

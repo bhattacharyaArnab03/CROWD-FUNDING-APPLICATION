@@ -36,20 +36,14 @@ function Explore() {
                   ? (campaign.raised / campaign.goal) * 100
                   : 0;
 
-              return (
-                <div className="campaign-card" key={campaign.id}>
+              const campaignId = campaign.id || campaign._id;
 
+              return (
+                <div className="campaign-card" key={campaignId}>
                   <div className="card-content">
                     <h3>{campaign.name}</h3>
-
-                    <p className="description">
-                      {campaign.description}
-                    </p>
-
-                    <p className="deadline">
-                      Deadline: {campaign.deadline}
-                    </p>
-
+                    <p className="description">{campaign.description}</p>
+                    <p className="deadline">Deadline: {campaign.deadline}</p>
                     {/* Progress */}
                     <div className="progress-bar">
                       <div
@@ -57,24 +51,19 @@ function Explore() {
                         style={{ width: `${progress}%` }}
                       ></div>
                     </div>
-
                     <div className="fund-info">
                       <span>₹{campaign.raised} Raised</span>
                       <span>Goal ₹{campaign.goal}</span>
                     </div>
-
                     {/* Role-Based Button */}
                     {user?.role === "user" && (
                       <button
                         className="view-btn"
-                        onClick={() =>
-                          navigate(`/payment/${campaign.id}`)
-                        }
+                        onClick={() => navigate(`/payment/${campaignId}`)}
                       >
                         Donate
                       </button>
                     )}
-
                     {!user && (
                       <button
                         className="view-btn"
@@ -83,7 +72,6 @@ function Explore() {
                         Login to Donate
                       </button>
                     )}
-
                   </div>
                 </div>
               );

@@ -1,3 +1,11 @@
+/* MESSAGE */
+.auth-message {
+  text-align: center;
+  color: #dc2626;
+  font-size: 1rem;
+  margin-bottom: 16px;
+  min-height: 20px;
+}
 /* PAGE BACKGROUND (Consistent gradient system) */
 .auth-page {
   display: flex;
