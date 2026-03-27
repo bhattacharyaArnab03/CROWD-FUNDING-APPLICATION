@@ -12,16 +12,6 @@ dist
 dist-ssr
 *.local
 
-# Database Documentation & Models
-MongoDB_Database_Design.md
-MongoDB_Operations_API_Guide.md
-MongoDB_Quick_Start.md
-MONGODB_COMPLETE_REFERENCE.md
-DATABASE_DESIGN_SUMMARY.md
-README_DATABASE_DESIGN.md
-QUICK_REFERENCE_CARD.md
-src/models/
-MongoModels.js
 
 # Editor directories and files
 .vscode/*
@@ -33,10 +23,3 @@ MongoModels.js
 *.njsproj
 *.sln
 *.sw?
-UNUSED_FILES_REPORT.md
-SYSTEM_FLOWS_MERMAID.md
-SYSTEM_FLOW_DIAGRAM.md
-FRONTEND_MODULE_STRUCTURE.md
-TEAM_FILE_ALLOCATION.md
-EQUAL_TEAM_ALLOCATION.md
-AUTH_AND_CAMPAIGN_DETAILED_EXPLANATION.md
