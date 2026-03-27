@@ -7,7 +7,7 @@ import campaignsRouter from "./routes/campaigns.js";
 import donationsRouter from "./routes/donations.js";
 import paymentsRouter from "./routes/payments.js";
 import authRouter from "./routes/auth.js";
-import { sessionSecret } from "./config/session.js";
+
 
 
 const app = express();
@@ -19,7 +19,7 @@ app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 // Session middleware
 app.use(
   session({
-    secret: sessionSecret,
+    secret: 'crowd-fund-session-secret-key', // Change this to a strong secret in production
     resave: false,
     saveUninitialized: false,
     cookie: {
