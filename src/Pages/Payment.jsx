@@ -6,22 +6,35 @@ import { AuthContext } from "../context/AuthContext";
 import "./Payment.css";
 
 
+
 function Payment() {
   const { id } = useParams();
   const { campaigns, donateToCampaign } = useContext(CampaignContext);
   const { user } = useContext(AuthContext);
   const [amount, setAmount] = useState("");
   const [receipt, setReceipt] = useState(null);
+  const navigate = useNavigate();
 
   const campaign = campaigns.find(
     (c) => String(c.id || c._id) === String(id)
   );
+
 
   if (!campaign) {
     return (
       <div className="payment-page">
         <div className="payment-card">
           <h2>Campaign not found</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="payment-page">
+        <div className="payment-card">
+          <h2>Please log in to donate.</h2>
         </div>
       </div>
     );
@@ -60,7 +73,7 @@ function Payment() {
             <p><strong>Date:</strong> {receipt.date}</p>
             <p><strong>Goal:</strong> ₹{receipt.goal}</p>
             <p><strong>Total Raised (after donation):</strong> ₹{receipt.raised}</p>
-            <button onClick={() => window.location.href = "/dashboard"}>Go to Dashboard</button>
+            <button onClick={() => navigate("/dashboard")}>Go to Dashboard</button>
           </div>
         ) : (
           <>
@@ -77,8 +90,9 @@ function Payment() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 required
+                min="1"
               />
-              <button type="submit">
+              <button type="submit" disabled={!amount || Number(amount) <= 0}>
                 Proceed to Pay
               </button>
             </form>
