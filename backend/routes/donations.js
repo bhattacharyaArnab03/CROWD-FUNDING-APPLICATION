@@ -3,8 +3,13 @@ import Donation from "../models/Donation.js";
 
 const router = Router();
 
+// GET /api/donations?userId=... or /api/donations?userEmail=...
 router.get("/", async (req, res) => {
-  const donations = await Donation.find().lean();
+  const { userId, userEmail } = req.query;
+  let filter = {};
+  if (userId) filter.userId = userId;
+  if (userEmail) filter.userEmail = userEmail;
+  const donations = await Donation.find(filter).lean();
   res.json(donations);
 });
 

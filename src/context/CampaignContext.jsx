@@ -3,9 +3,19 @@ import {
   getCampaigns as fetchCampaigns,
   donateToCampaign as donateApi,
   createCampaign as createCampaignApi,
+  getUserDonations,
 } from "../services/campaignService";
 
 export const CampaignContext = createContext();
+
+
+// Helper to normalize campaign objects
+const normalizeCampaign = (campaign) => ({
+  ...campaign,
+  name: campaign.name || campaign.title || "Untitled Campaign",
+  id: campaign.id || campaign._id,
+  _id: campaign._id || campaign.id,
+});
 
 export function CampaignProvider({ children }) {
   const [campaigns, setCampaigns] = useState([]);
@@ -17,12 +27,7 @@ export function CampaignProvider({ children }) {
       setLoading(true);
       try {
         const data = await fetchCampaigns();
-        setCampaigns(
-          data.map((campaign) => ({
-            ...campaign,
-            name: campaign.name || campaign.title || "Untitled Campaign",
-          }))
-        );
+        setCampaigns(data.map(normalizeCampaign));
       } catch (err) {
         setError(err.message || "Failed to load campaigns");
       } finally {
@@ -43,11 +48,7 @@ export function CampaignProvider({ children }) {
         image: campaign.image || "",
       });
 
-      setCampaigns((prev) => [...prev, {
-        ...saved,
-        name: saved.name || saved.title,
-        id: saved._id || saved.id,
-      }]);
+      setCampaigns((prev) => [...prev, normalizeCampaign(saved)]);
       return saved;
     } catch (err) {
       throw err;
@@ -75,15 +76,30 @@ export function CampaignProvider({ children }) {
   };
 
   const donateToCampaign = async (id, amount, user) => {
-    const resp = await donateApi(id, amount);
+    const resp = await donateApi(id, amount, user);
+    // resp.campaign is the updated campaign from backend
+    const updatedCampaign = resp.campaign || resp;
     setCampaigns((prev) =>
-      prev.map((c) => (c.id === resp.id ? { ...c, ...resp } : c))
+      prev.map((c) => {
+        const prevId = String(c.id || c._id);
+        const newId = String(updatedCampaign.id || updatedCampaign._id);
+        if (prevId === newId) {
+          return {
+            ...c,
+            ...updatedCampaign,
+            id: updatedCampaign.id || updatedCampaign._id || c.id || c._id,
+            _id: updatedCampaign._id || updatedCampaign.id || c._id || c.id,
+            name: updatedCampaign.name || updatedCampaign.title || c.name,
+          };
+        }
+        return c;
+      })
     );
 
     if (user) {
       const donationRecord = {
         campaignId: id,
-        campaignName: resp.name || getCampaignById(id)?.name,
+        campaignName: updatedCampaign.name || getCampaignById(id)?.name,
         amount: Number(amount),
         userEmail: user.email,
         date: new Date().toLocaleString(),
@@ -96,6 +112,17 @@ export function CampaignProvider({ children }) {
 
   const [donations, setDonations] = useState([]);
 
+  // Fetch user donations from backend
+  const fetchDonationsForUser = async (user) => {
+    if (!user) return;
+    try {
+      const data = await getUserDonations({ userId: user.id || user._id, userEmail: user.email });
+      setDonations(data);
+    } catch (err) {
+      setError(err.message || "Failed to fetch donations");
+    }
+  };
+
   return (
     <CampaignContext.Provider
       value={{
@@ -107,6 +134,7 @@ export function CampaignProvider({ children }) {
         donateToCampaign,
         getCampaignById,
         donations,
+        fetchDonationsForUser,
       }}
     >
       {children}

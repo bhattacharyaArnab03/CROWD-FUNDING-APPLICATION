@@ -7,23 +7,22 @@
     linear-gradient(to bottom, #0f172a 0%, #e2e8f0 45%);
 }
 
-
 /* HERO */
 .dashboard-hero {
   padding: 80px 20px 100px 20px;
   text-align: center;
   color: white;
 }
-
 .dashboard-hero h1 {
   font-size: 42px;
   font-weight: 800;
   margin-bottom: 15px;
 }
-
-.dashboard-hero p {
-  font-size: 18px;
-  color: #94a3b8;
+.dashboard-hero p,
+.stat-card p,
+.activity-card p {
+  font-size: 14px;
+  color: #64748b;
 }
 
 /* MAIN SECTION (Layered like Explore) */
@@ -48,22 +47,15 @@
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
   transition: all 0.3s ease;
 }
-
 .stat-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 25px 50px rgba(15, 23, 42, 0.15);
 }
-
 .stat-card h3 {
   font-size: 28px;
   font-weight: 800;
   color: #0f172a;
   margin-bottom: 8px;
-}
-
-.stat-card p {
-  font-size: 14px;
-  color: #64748b;
 }
 
 /* ACTIVITY */
@@ -73,7 +65,6 @@
   margin-bottom: 20px;
   color: #0f172a;
 }
-
 .activity-card {
   background: white;
   padding: 20px 25px;
@@ -85,22 +76,11 @@
   align-items: center;
   transition: 0.3s ease;
 }
-
 .activity-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 25px rgba(15, 23, 42, 0.1);
 }
-
-.activity-card p {
-  font-size: 14px;
-  color: #334155;
-}
-
 .activity-card span {
   font-size: 13px;
   color: #94a3b8;
-}
-
-body {
-  background-color: #0f172a;
 }

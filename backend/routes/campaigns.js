@@ -1,17 +1,40 @@
 import { Router } from "express";
 import Campaign from "../models/Campaign.js";
 import Donation from "../models/Donation.js";
+
 import Payment from "../models/Payment.js";
 import User from "../models/User.js";
+import { generateTransactionNumber, generatePaymentTransactionId } from "../utils/generateTransactionNumber.js";
+import { updateCampaignFields } from "../services/campaignService.js";
 
 const router = Router();
 
 const calculateProgress = (campaign) =>
   Math.min(100, Math.round((campaign.raised / campaign.goal) * 100));
 
+// Update campaign statuses before returning
 router.get("/", async (req, res) => {
-  const campaigns = await Campaign.find().lean();
-  res.json(campaigns);
+  const now = new Date();
+  const campaigns = await Campaign.find();
+  for (const campaign of campaigns) {
+    if (campaign.status !== "Cancelled" && campaign.status !== "Completed") {
+      if (campaign.raised >= campaign.goal) {
+        if (campaign.status !== "Completed") {
+          campaign.status = "Completed";
+          await campaign.save();
+        }
+      } else if (campaign.deadline < now) {
+        if (campaign.status !== "Overdue") {
+          campaign.status = "Overdue";
+          await campaign.save();
+        }
+      } else if (campaign.status !== "Active") {
+        campaign.status = "Active";
+        await campaign.save();
+      }
+    }
+  }
+  res.json(campaigns.map(c => c.toObject()));
 });
 
 router.get("/:id", async (req, res) => {
@@ -59,17 +82,7 @@ router.put("/:id", async (req, res) => {
     const campaign = await Campaign.findById(req.params.id);
     if (!campaign) return res.status(404).json({ message: "Campaign not found." });
 
-    const { name, description, goal, deadline, raised, status } = req.body;
-
-    if (name) campaign.title = name;
-    if (description) campaign.description = description;
-    if (goal !== undefined) campaign.goal = Number(goal);
-    if (deadline) campaign.deadline = new Date(deadline);
-    if (raised !== undefined) campaign.raised = Number(raised);
-    if (status) campaign.status = status;
-
-    campaign.progress = campaign.goal > 0 ? Math.min(100, Math.round((campaign.raised / campaign.goal) * 100)) : 0;
-
+    await updateCampaignFields(campaign, req.body);
     await campaign.save();
     res.json(campaign);
   } catch (err) {
@@ -93,8 +106,9 @@ router.post("/:id/donate", async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found." });
 
+
     const donation = new Donation({
-      transactionNumber: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+      transactionNumber: generateTransactionNumber(),
       amount: donationAmount,
       remarks: req.body.remarks || "",
       paymentMethod,
@@ -102,15 +116,33 @@ router.post("/:id/donate", async (req, res) => {
       userId: user._id,
       userEmail: userEmail || user.email,
       paymentStatus: "Completed",
-      transactionId: `PAY-${Math.floor(100000 + Math.random() * 900000)}`,
+      transactionId: generatePaymentTransactionId(),
     });
 
     const savedDonation = await donation.save();
 
     campaign.raised += donationAmount;
     campaign.progress = calculateProgress(campaign);
-    campaign.status = campaign.raised >= campaign.goal ? "Funded" : "Active";
+    if (campaign.raised >= campaign.goal) {
+      campaign.status = "Completed";
+    } else if (campaign.deadline < new Date()) {
+      campaign.status = "Overdue";
+    } else {
+      campaign.status = "Active";
+    }
     await campaign.save();
+// Admin: Cancel a campaign
+router.post("/:id/cancel", async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign) return res.status(404).json({ message: "Campaign not found." });
+    campaign.status = "Cancelled";
+    await campaign.save();
+    res.json({ message: "Campaign cancelled.", campaign });
+  } catch (err) {
+    res.status(400).json({ message: "Failed to cancel campaign.", error: err.message });
+  }
+});
 
     user.totalDonated += donationAmount;
     await user.save();

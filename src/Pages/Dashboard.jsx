@@ -1,15 +1,28 @@
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { CampaignContext } from "../context/CampaignContext";
 import "./Dashboard.css";
 
+
 function Dashboard() {
   const { user } = useContext(AuthContext);
-  const { donations } = useContext(CampaignContext);
+  const { donations, fetchDonationsForUser, campaigns } = useContext(CampaignContext);
+
+  useEffect(() => {
+    fetchDonationsForUser && fetchDonationsForUser(user);
+  }, [user]);
 
   const userDonations = donations.filter(
     (d) => d.userEmail === user?.email
   );
+
+  const getCampaignName = (donation) => {
+    if (donation.campaignName) return donation.campaignName;
+    const campaign = campaigns.find(
+      (c) => String(c.id || c._id) === String(donation.campaignId)
+    );
+    return campaign ? campaign.name : "[Unknown Campaign]";
+  };
 
   const totalDonated = userDonations.reduce(
     (sum, d) => sum + d.amount,
@@ -48,7 +61,7 @@ function Dashboard() {
               <div className="activity-card" key={index}>
                 <p>
                   Donated <strong>₹{d.amount}</strong> to{" "}
-                  <strong>{d.campaignName}</strong>
+                  <strong>{getCampaignName(d)}</strong>
                 </p>
                 <span>{d.date}</span>
               </div>

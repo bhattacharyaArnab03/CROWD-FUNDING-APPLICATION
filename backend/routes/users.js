@@ -1,6 +1,8 @@
 import { Router } from "express";
+
 import User from "../models/User.js";
 import Donation from "../models/Donation.js";
+import { generateTransactionNumber } from "../utils/generateTransactionNumber.js";
 
 const router = Router();
 
@@ -37,8 +39,9 @@ router.post("/", async (req, res) => {
   const exists = await User.findOne({ email });
   if (exists) return res.status(400).json({ message: "Email already exists." });
 
+
   const newUser = new User({
-    transactionNumber: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
+    transactionNumber: generateTransactionNumber(),
     name,
     email,
     password,

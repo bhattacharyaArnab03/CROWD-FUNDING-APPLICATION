@@ -98,24 +98,7 @@
   font-size: 0.9rem;
   margin-top: -10px;
 }
-/* FILTER */
-.filter-bar {
-  margin-bottom: 30px;
-}
 
-.filter-bar button {
-  margin-right: 10px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: none;
-  background-color: #e2e8f0;
-  cursor: pointer;
-}
-
-.active-filter {
-  background-color: #1e3a8a;
-  color: white;
-}
 
 /* GRID */
 .admin-grid {
@@ -240,17 +223,4 @@
   background-color: #1e3a8a;
 }
 
-.raise-btn {
-  background-color: #22c55e;
-  color: white;
-}
 
-.close-btn {
-  background-color: #f59e0b;
-  color: white;
-}
-
-.delete-btn {
-  background-color: #ef4444;
-  color: white;
-}

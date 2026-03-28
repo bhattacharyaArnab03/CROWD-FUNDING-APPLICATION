@@ -1,5 +1,7 @@
 import { Router } from "express";
+
 import User from "../models/User.js";
+import { generateTransactionNumber } from "../utils/generateTransactionNumber.js";
 
 const router = Router();
 
@@ -13,8 +15,9 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ message: "User already exists" });
   }
 
+
   const user = new User({
-    transactionNumber: `TXN-${Math.floor(Math.random() * 1000000)}`,
+    transactionNumber: generateTransactionNumber(),
     name,
     email,
     password,
@@ -26,6 +29,8 @@ router.post("/register", async (req, res) => {
   res.status(201).json({ id: user._id, name: user.name, email: user.email, role: user.role });
 });
 
+
+// Login: set session
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -37,7 +42,35 @@ router.post("/login", async (req, res) => {
     return res.status(401).json({ message: "Invalid credentials" });
   }
 
+  // Set user info in session
+  req.session.user = {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+
   res.json({ id: user._id, name: user.name, email: user.email, role: user.role });
+});
+
+// Logout: destroy session
+router.post("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ message: "Logout failed" });
+    }
+    res.clearCookie("connect.sid");
+    res.json({ message: "Logged out successfully" });
+  });
+});
+
+// Get current user from session
+router.get("/me", (req, res) => {
+  if (req.session.user) {
+    res.json(req.session.user);
+  } else {
+    res.status(401).json({ message: "Not authenticated" });
+  }
 });
 
 router.post("/forgot-password", async (req, res) => {
