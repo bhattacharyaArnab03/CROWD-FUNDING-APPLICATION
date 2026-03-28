@@ -17,6 +17,19 @@ const normalizeCampaign = (campaign) => ({
   _id: campaign._id || campaign.id,
 });
 
+/**
+ * CampaignProvider is a context provider that wraps the CampaignContext and
+ * provides the following values and functions to its children:
+ * - campaigns: an array of campaign objects
+ * - loading: a boolean indicating whether the campaigns are being loaded
+ * - error: an error message if there was an error loading the campaigns
+ * - addCampaign: a function to add a new campaign
+ * - updateCampaign: a function to update a campaign
+ * - donateToCampaign: a function to donate to a campaign
+ * - getCampaignById: a function to get a campaign by its ID
+ * - donations: an array of donation records
+ * - fetchDonationsForUser: a function to fetch a user's donations from the backend
+ */
 export function CampaignProvider({ children }) {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
