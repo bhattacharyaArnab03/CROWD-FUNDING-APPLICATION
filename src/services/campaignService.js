@@ -37,3 +37,7 @@ export function getUserDonations({ userId, userEmail }) {
   else if (userEmail) query = `userEmail=${encodeURIComponent(userEmail)}`;
   return apiRequest("get", `${API_BASE}/api/donations${query ? `?${query}` : ""}`);
 }
+
+export function getDonationHistory() {
+  return apiRequest("get", `${API_BASE}/api/donations`);
+}

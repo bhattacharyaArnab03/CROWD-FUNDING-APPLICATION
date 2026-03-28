@@ -30,6 +30,46 @@
   margin-top: -60px;
 }
 
+.admin-tab-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.admin-tab {
+  padding: 14px 24px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.85);
+  color: #0f172a;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.admin-tab:hover,
+.admin-tab.active {
+  background: #1e3a8a;
+  color: white;
+  border-color: #1e3a8a;
+}
+
+.admin-content-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: 30px;
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .admin-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* SUMMARY */
 .admin-summary {
   display: grid;
@@ -57,12 +97,20 @@
 }
 
 /* CREATE CARD */
+.create-section {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 40px;
+}
+
 .create-card {
   background: white;
   padding: 30px;
   border-radius: 16px;
   margin-bottom: 40px;
   box-shadow: 0 20px 40px rgba(15,23,42,0.08);
+  width: 100%;
+  max-width: 640px;
 }
 
 .admin-form {
@@ -194,6 +242,48 @@
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
+}
+
+.history-section {
+  background: white;
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 20px 40px rgba(15,23,42,0.08);
+  margin-bottom: 40px;
+}
+
+.history-section h2 {
+  margin-bottom: 20px;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.history-table-wrapper {
+  overflow-x: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.history-table th,
+.history-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  font-size: 14px;
+}
+
+.history-table th {
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.history-table tbody tr:hover {
+  background: #f8fafc;
 }
 
 .save-btn {

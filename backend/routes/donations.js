@@ -9,8 +9,24 @@ router.get("/", async (req, res) => {
   let filter = {};
   if (userId) filter.userId = userId;
   if (userEmail) filter.userEmail = userEmail;
-  const donations = await Donation.find(filter).lean();
-  res.json(donations);
+
+  const donations = await Donation.find(filter)
+    .populate("userId")
+    .populate("campaignId")
+    .lean();
+
+  const history = donations.map((donation) => ({
+    _id: donation._id,
+    transactionNumber: donation.transactionNumber,
+    amount: donation.amount,
+    donatedAt: donation.donatedAt,
+    userEmail: donation.userEmail || donation.userId?.email,
+    donorEmail: donation.userId?.email || donation.userEmail,
+    donorName: donation.userId?.name || "Anonymous",
+    campaignName: donation.campaignId?.title || donation.campaignId?.name || "Unknown Campaign",
+  }));
+
+  res.json(history);
 });
 
 router.get("/:id", async (req, res) => {

@@ -87,6 +87,11 @@
   color: #0f172a;
 }
 
+.auth-form input,
+.password-field input {
+  box-sizing: border-box;
+}
+
 .auth-form input {
   width: 100%;
   padding: 14px;
@@ -95,6 +100,42 @@
   border: 1px solid #e2e8f0;
   font-size: 14px;
   transition: 0.3s ease;
+}
+
+.password-field {
+  position: relative;
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 48px;
+  margin-bottom: 0;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #64748b;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.password-toggle:hover {
+  color: #0f172a;
 }
 
 .auth-form input:focus {

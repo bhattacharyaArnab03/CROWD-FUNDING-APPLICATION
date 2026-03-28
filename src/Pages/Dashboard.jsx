@@ -13,7 +13,7 @@ function Dashboard() {
   }, [user]);
 
   const userDonations = donations.filter(
-    (d) => d.userEmail === user?.email
+    (d) => (d.userEmail || d.donorEmail) === user?.email
   );
 
   const getCampaignName = (donation) => {

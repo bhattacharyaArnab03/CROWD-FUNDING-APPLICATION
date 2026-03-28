@@ -103,6 +103,17 @@ router.post("/:id/donate", async (req, res) => {
       return res.status(400).json({ message: "Invalid donation payload." });
     }
 
+    const remainingAmount = campaign.goal - campaign.raised;
+    if (remainingAmount <= 0) {
+      return res.status(400).json({ message: "This campaign is already fully funded." });
+    }
+
+    if (donationAmount > remainingAmount) {
+      return res.status(400).json({
+        message: `Donation exceeds remaining goal amount. You can donate up to ₹${remainingAmount}.`,
+      });
+    }
+
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found." });
 
@@ -131,18 +142,6 @@ router.post("/:id/donate", async (req, res) => {
       campaign.status = "Active";
     }
     await campaign.save();
-// Admin: Cancel a campaign
-router.post("/:id/cancel", async (req, res) => {
-  try {
-    const campaign = await Campaign.findById(req.params.id);
-    if (!campaign) return res.status(404).json({ message: "Campaign not found." });
-    campaign.status = "Cancelled";
-    await campaign.save();
-    res.json({ message: "Campaign cancelled.", campaign });
-  } catch (err) {
-    res.status(400).json({ message: "Failed to cancel campaign.", error: err.message });
-  }
-});
 
     user.totalDonated += donationAmount;
     await user.save();
@@ -164,6 +163,19 @@ router.post("/:id/cancel", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(400).json({ message: "Donation failed.", error: err.message });
+  }
+});
+
+// Admin: Cancel a campaign
+router.post("/:id/cancel", async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign) return res.status(404).json({ message: "Campaign not found." });
+    campaign.status = "Cancelled";
+    await campaign.save();
+    res.json({ message: "Campaign cancelled.", campaign });
+  } catch (err) {
+    res.status(400).json({ message: "Failed to cancel campaign.", error: err.message });
   }
 });
 

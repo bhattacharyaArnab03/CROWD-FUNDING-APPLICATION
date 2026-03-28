@@ -13,6 +13,7 @@ function Payment() {
   const { user } = useContext(AuthContext);
   const [amount, setAmount] = useState("");
   const [receipt, setReceipt] = useState(null);
+  const [donationError, setDonationError] = useState("");
   const navigate = useNavigate();
 
   const campaign = campaigns.find(
@@ -40,24 +41,49 @@ function Payment() {
     );
   }
 
+  const remainingAmount = Math.max(0, campaign.goal - campaign.raised);
+
   const handlePayment = async (e) => {
     e.preventDefault();
     const donationAmount = Number(amount);
     if (!donationAmount || donationAmount <= 0) {
-      alert("Please enter a valid donation amount.");
+      const message = "Please enter a valid donation amount.";
+      setDonationError(message);
+      alert(message);
       return;
     }
-    // Simulate donation and generate receipt
-    await donateToCampaign(campaign.id, donationAmount, user);
-    setReceipt({
-      campaignName: campaign.name,
-      userEmail: user?.email,
-      amount: donationAmount,
-      date: new Date().toLocaleString(),
-      goal: campaign.goal,
-      raised: campaign.raised + donationAmount,
-    });
-    setAmount("");
+
+    if (remainingAmount <= 0) {
+      const message = "This campaign is already fully funded.";
+      setDonationError(message);
+      alert(message);
+      return;
+    }
+
+    if (donationAmount > remainingAmount) {
+      const message = `Donation exceeds remaining goal amount. You can donate up to ₹${remainingAmount}.`;
+      setDonationError(message);
+      alert(message);
+      return;
+    }
+
+    try {
+      await donateToCampaign(campaign.id, donationAmount, user);
+      setDonationError("");
+      setReceipt({
+        campaignName: campaign.name,
+        userEmail: user?.email,
+        amount: donationAmount,
+        date: new Date().toLocaleString(),
+        goal: campaign.goal,
+        raised: campaign.raised + donationAmount,
+      });
+      setAmount("");
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || "Donation failed.";
+      setDonationError(message);
+      alert(message);
+    }
   };
 
   return (
@@ -83,19 +109,37 @@ function Payment() {
               <p><strong>Raised:</strong> ₹{campaign.raised}</p>
               <p><strong>Deadline:</strong> {campaign.deadline}</p>
             </div>
-            <form onSubmit={handlePayment}>
-              <input
-                type="number"
-                placeholder="Enter donation amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-                min="1"
-              />
-              <button type="submit" disabled={!amount || Number(amount) <= 0}>
-                Proceed to Pay
-              </button>
-            </form>
+            {remainingAmount <= 0 ? (
+              <div className="campaign-closed">
+                <p>This campaign is already fully funded.</p>
+                <button onClick={() => navigate("/dashboard")}>Back to Dashboard</button>
+              </div>
+            ) : (
+              <>
+                <form onSubmit={handlePayment}>
+                  <input
+                    type="number"
+                    placeholder={`Enter donation amount (up to ₹${remainingAmount})`}
+                    value={amount}
+                    onChange={(e) => {
+                      setAmount(e.target.value);
+                      if (donationError) setDonationError("");
+                    }}
+                    required
+                    min="1"
+                    max={remainingAmount}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!amount || Number(amount) <= 0}
+                  >
+                    Proceed to Pay
+                  </button>
+                </form>
+                {donationError && <p className="donation-error">{donationError}</p>}
+                <p className="donation-note">Remaining goal amount: ₹{remainingAmount}</p>
+              </>
+            )}
           </>
         )}
       </div>
