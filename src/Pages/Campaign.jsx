@@ -25,9 +25,12 @@ function Campaign() {
     fetchData();
   }, [id]);
 
-  if (loading) return <p>Loading campaign...</p>;
-  if (error) return <p>Error: {error}</p>;
-  if (!campaign) return <p>Campaign not found.</p>;
+  if (loading) 
+    return <p>Loading campaign...</p>;
+  if (error) 
+    return <p>Error: {error}</p>;
+  if (!campaign) 
+    return <p>Campaign not found.</p>;
 
   return (
     <div>
