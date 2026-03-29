@@ -15,17 +15,13 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ message: "User already exists" });
   }
 
-
-  const user = new User({
-    transactionNumber: generateTransactionNumber(),
+  const user = await User.create({
     name,
     email,
     password,
     role: "user",
     totalDonated: 0
   });
-
-  await user.save();
   res.status(201).json({ id: user._id, name: user.name, email: user.email, role: user.role });
 });
 
@@ -79,13 +75,14 @@ router.post("/forgot-password", async (req, res) => {
     return res.status(400).json({ message: "Email and newPassword are required" });
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOneAndUpdate(
+    { email },
+    { password: newPassword },
+    { new: true }
+  );
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
-
-  user.password = newPassword;
-  await user.save();
 
   res.json({ message: "Password has been reset successfully" });
 });

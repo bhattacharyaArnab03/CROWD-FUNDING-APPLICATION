@@ -41,7 +41,6 @@ router.post("/", async (req, res) => {
 
 
   const newUser = new User({
-    transactionNumber: generateTransactionNumber(),
     name,
     email,
     password,
