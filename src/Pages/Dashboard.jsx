@@ -1,17 +1,33 @@
-import { useContext, useEffect } from "react";
-import { AuthContext } from "../context/AuthContext";
-import { CampaignContext } from "../context/CampaignContext";
-import "./Dashboard.css";
 
+import { useContext, useEffect, useState } from "react";
+import { AuthContext } from "../context/AuthContext";
+import { getUserDonations, getCampaigns } from "../services/campaignService";
+import "./Dashboard.css";
 
 function Dashboard() {
   const { user } = useContext(AuthContext);
-  const { donations, fetchDonationsForUser, campaigns } = useContext(CampaignContext);
+  const [donations, setDonations] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDonationsForUser && fetchDonationsForUser(user);
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const [donationData, campaignData] = await Promise.all([
+          getUserDonations({ userId: user?.id || user?._id, userEmail: user?.email }),
+          getCampaigns(),
+        ]);
+        setDonations(donationData);
+        setCampaigns(campaignData);
+      } catch (err) {
+        // handle error if needed
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (user) fetchData();
   }, [user]);
-
 
   // Sort donations by date descending (most recent first)
   const userDonations = donations
@@ -56,7 +72,9 @@ function Dashboard() {
 
         <div className="history-section">
           <h2>Donation History</h2>
-          {userDonations.length === 0 ? (
+          {loading ? (
+            <p>Loading...</p>
+          ) : userDonations.length === 0 ? (
             <p>No donations yet.</p>
           ) : (
             <div className="history-table-wrapper">

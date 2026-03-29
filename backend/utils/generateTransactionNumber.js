@@ -1,9 +1,11 @@
-// backend/utils/generateTransactionNumber.js
-
-export function generateTransactionNumber(prefix = "TXN", digits = 6) {
-  const min = Math.pow(10, digits - 1);
-  const max = Math.pow(10, digits) - 1;
-  return `${prefix}-${Math.floor(Math.random() * (max - min + 1)) + min}`;
+// Generates TXN-DDMMYY-NUMBER
+export function generateTransactionNumber(prefix = "TXN") {
+  const date = new Date();
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yy = String(date.getFullYear()).slice(-2);
+  const randomNum = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+  return `${prefix}-${dd}${mm}${yy}-${randomNum}`;
 }
 
 export function generatePaymentTransactionId() {

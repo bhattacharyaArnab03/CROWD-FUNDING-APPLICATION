@@ -1,12 +1,11 @@
-import { useEffect, useState, useContext } from "react";
-import { CampaignContext } from "../context/CampaignContext";
-import { updateCampaign as updateCampaignApi, getDonationHistory } from "../services/campaignService";
+
+import { useEffect, useState } from "react";
+import { getCampaigns, createCampaign, updateCampaign as updateCampaignApi, getDonationHistory } from "../services/campaignService";
 import "./Admin.css";
 import CampaignCard from "../Components/CampaignCard";
 
 function Admin() {
-  const { campaigns, addCampaign, updateCampaign } = useContext(CampaignContext);
-
+  const [campaigns, setCampaigns] = useState([]);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
   const [description, setDescription] = useState("");
@@ -27,6 +26,18 @@ function Admin() {
   const [activeTab, setActiveTab] = useState("create");
 
   const today = new Date().toISOString().split("T")[0];
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const data = await getCampaigns();
+        setCampaigns(data);
+      } catch (err) {
+        setError("Failed to load campaigns");
+      }
+    }
+    fetchData();
+  }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -52,7 +63,8 @@ function Admin() {
     };
 
     try {
-      await addCampaign(newEvent);
+      const created = await createCampaign(newEvent);
+      setCampaigns((prev) => [...prev, created]);
       setName("");
       setGoal("");
       setDescription("");
@@ -64,6 +76,7 @@ function Admin() {
     }
   };
 
+
   const startEditCampaign = (campaign) => {
     setEditingCampaignId(campaign.id || campaign._id);
     setEditName(campaign.name || campaign.title || "");
@@ -74,6 +87,7 @@ function Admin() {
     setEditError("");
   };
 
+
   useEffect(() => {
     const loadHistory = async () => {
       try {
@@ -83,7 +97,6 @@ function Admin() {
         setHistoryError(err.response?.data?.message || err.message || "Unable to load donation history.");
       }
     };
-
     loadHistory();
   }, []);
 
@@ -91,6 +104,7 @@ function Admin() {
     setEditingCampaignId(null);
     setEditError("");
   };
+
 
   const saveEditCampaign = async (campaignId) => {
     if (!editName || !editDescription || !editDeadline || !editGoal) {
@@ -113,7 +127,7 @@ function Admin() {
 
     try {
       await updateCampaignApi(campaignId, updates);
-      updateCampaign(campaignId, updates);
+      setCampaigns((prev) => prev.map((c) => (String(c.id || c._id) === String(campaignId) ? { ...c, ...updates } : c)));
       setEditingCampaignId(null);
       setEditError("");
     } catch (err) {

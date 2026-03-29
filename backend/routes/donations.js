@@ -70,8 +70,17 @@ router.post("/", async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found." });
 
+
+    // Ensure unique transaction number
+    let txnNumber;
+    let exists = true;
+    while (exists) {
+      txnNumber = generateTransactionNumber();
+      exists = await Donation.exists({ transactionNumber: txnNumber });
+    }
+
     const donation = new Donation({
-      transactionNumber: generateTransactionNumber(),
+      transactionNumber: txnNumber,
       amount: donationAmount,
       remarks: remarks || "",
       paymentMethod,

@@ -1,12 +1,29 @@
-import { useContext } from "react";
+
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { CampaignContext } from "../context/CampaignContext";
+import { getCampaignById } from "../services/campaignService";
 import ProgressBar from "../Components/ProgressBar";
 
 function Campaign() {
   const { id } = useParams();
-  const { getCampaignById, loading, error } = useContext(CampaignContext);
-  const campaign = getCampaignById(id);
+  const [campaign, setCampaign] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const data = await getCampaignById(id);
+        setCampaign(data);
+      } catch (err) {
+        setError("Failed to load campaign");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [id]);
 
   if (loading) return <p>Loading campaign...</p>;
   if (error) return <p>Error: {error}</p>;
