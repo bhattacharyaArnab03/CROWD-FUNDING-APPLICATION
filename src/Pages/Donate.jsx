@@ -12,9 +12,12 @@ function Donate() {
 
   const campaign = getCampaignById(id);
 
-  if (loading) return <p>Loading campaign...</p>;
-  if (error) return <p>Error: {error}</p>;
-  if (!campaign) return <p>Campaign not found.</p>;
+  if (loading) 
+    return <p>Loading campaign...</p>;
+  if (error) 
+    return <p>Error: {error}</p>;
+  if (!campaign) 
+    return <p>Campaign not found.</p>;
 
   async function handleDonate(e) {
     e.preventDefault();
@@ -27,7 +30,8 @@ function Donate() {
       await donateToCampaign(campaign.id, donationAmount, user);
       alert("Donation Successful");
       setAmount("");
-    } catch (err) {
+    } 
+    catch (err) {
       alert("Donation failed: " + (err.message || "Unknown error"));
     }
   }

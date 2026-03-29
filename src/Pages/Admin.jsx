@@ -2,6 +2,7 @@ import { useEffect, useState, useContext } from "react";
 import { CampaignContext } from "../context/CampaignContext";
 import { updateCampaign as updateCampaignApi, getDonationHistory } from "../services/campaignService";
 import "./Admin.css";
+import CampaignCard from "../Components/CampaignCard";
 
 function Admin() {
   const { campaigns, addCampaign, updateCampaign } = useContext(CampaignContext);
@@ -209,80 +210,65 @@ function Admin() {
         ) : activeTab === "campaigns" ? (
           <div className="admin-grid">
             {campaigns.map((campaign) => {
-              const progress = campaign.goal > 0 ? (campaign.raised / campaign.goal) * 100 : 0;
               const campaignId = campaign.id || campaign._id;
-
               if (editingCampaignId === String(campaignId)) {
                 return (
                   <div className="admin-card" key={campaignId}>
-                      <h3>Editing: {campaign.name}</h3>
-                      <form className="admin-form" onSubmit={(e) => { e.preventDefault(); saveEditCampaign(campaignId); }}>
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          required
-                        />
-                        <input
-                          type="number"
-                          value={editGoal}
-                          onChange={(e) => setEditGoal(e.target.value)}
-                          required
-                        />
-                        <input
-                          type="date"
-                          min={today}
-                          value={editDeadline}
-                          onChange={(e) => setEditDeadline(e.target.value)}
-                          required
-                        />
-                        <input
-                          type="text"
-                          value={editDescription}
-                          onChange={(e) => setEditDescription(e.target.value)}
-                          required
-                        />
-                        {/* Removed the 'raised' input field as requested */}
-                        {editError && <p className="admin-error">{editError}</p>}
-                        <div className="card-actions">
-                          <button type="submit" className="save-btn">Save</button>
-                          <button type="button" className="cancel-btn" onClick={cancelEdit}>Cancel</button>
-                        </div>
-                      </form>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="admin-card" key={campaignId}>
-                    <div className="card-header">
-                      <h3>{campaign.name}</h3>
-                      <span className={`status ${campaign.status.toLowerCase()}`}>
-                        {campaign.status}
-                      </span>
-                    </div>
-
-                    <p className="description">{campaign.description}</p>
-                    <p className="deadline">Deadline: {campaign.deadline ? campaign.deadline.slice(0, 10) : ''}</p>
-
-                    <div className="progress-bar">
-                      <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-                    </div>
-
-                    <div className="amounts">
-                      <span>₹{campaign.raised}</span>
-                      <span>₹{campaign.goal}</span>
-                    </div>
-
-                    <div className="card-actions">
-                      <button type="button" className="edit-btn" onClick={() => startEditCampaign(campaign)}>
-                        Edit Campaign
-                      </button>
-                    </div>
+                    <h3>Editing: {campaign.name}</h3>
+                    <form className="admin-form" onSubmit={(e) => { e.preventDefault(); saveEditCampaign(campaignId); }}>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        required
+                      />
+                      <input
+                        type="number"
+                        value={editGoal}
+                        onChange={(e) => setEditGoal(e.target.value)}
+                        required
+                      />
+                      <input
+                        type="date"
+                        min={today}
+                        value={editDeadline}
+                        onChange={(e) => setEditDeadline(e.target.value)}
+                        required
+                      />
+                      <input
+                        type="text"
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        required
+                      />
+                      {/* Removed the 'raised' input field as requested */}
+                      {editError && <p className="admin-error">{editError}</p>}
+                      <div className="card-actions">
+                        <button type="submit" className="save-btn">Save</button>
+                        <button type="button" className="cancel-btn" onClick={cancelEdit}>Cancel</button>
+                      </div>
+                    </form>
                   </div>
                 );
-              })}
-            </div>
+              }
+              // Use CampaignCard for display
+              return (
+                <div className="admin-card" key={campaignId}>
+                  <CampaignCard
+                    campaign={campaign}
+                    user={{ role: "admin" }}
+                    onDonate={() => {}}
+                    onLogin={() => {}}
+                  />
+                  <div className="card-actions">
+                    <button type="button" className="edit-btn" onClick={() => startEditCampaign(campaign)}>
+                      Edit Campaign
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : activeTab === "transactions" ? (
           <div className="history-section">
             <h2>Donation History</h2>
