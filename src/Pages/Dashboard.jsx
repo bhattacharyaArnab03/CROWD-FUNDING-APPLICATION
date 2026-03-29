@@ -12,9 +12,15 @@ function Dashboard() {
     fetchDonationsForUser && fetchDonationsForUser(user);
   }, [user]);
 
-  const userDonations = donations.filter(
-    (d) => (d.userEmail || d.donorEmail) === user?.email
-  );
+
+  // Sort donations by date descending (most recent first)
+  const userDonations = donations
+    .filter((d) => (d.userEmail || d.donorEmail) === user?.email)
+    .sort((a, b) => {
+      const dateA = new Date(a.donatedAt || a.date);
+      const dateB = new Date(b.donatedAt || b.date);
+      return dateB - dateA;
+    });
 
   const getCampaignName = (donation) => {
     if (donation.campaignName) return donation.campaignName;
@@ -31,44 +37,52 @@ function Dashboard() {
 
   return (
     <div className="dashboard-page">
-
       <div className="dashboard-hero">
         <h1>Welcome, {user?.name}</h1>
         <p>Your contribution impact overview</p>
       </div>
 
       <div className="dashboard-section">
-
         <div className="stats-grid">
           <div className="stat-card">
             <h3>₹{totalDonated}</h3>
             <p>Total Donated</p>
           </div>
-
           <div className="stat-card">
             <h3>{userDonations.length}</h3>
             <p>Total Donations</p>
           </div>
         </div>
 
-        <div className="activity-section">
-          <h2>Recent Activity</h2>
-
+        <div className="history-section">
+          <h2>Donation History</h2>
           {userDonations.length === 0 ? (
             <p>No donations yet.</p>
           ) : (
-            userDonations.map((d, index) => (
-              <div className="activity-card" key={index}>
-                <p>
-                  Donated <strong>₹{d.amount}</strong> to{" "}
-                  <strong>{getCampaignName(d)}</strong>
-                </p>
-                <span>{d.date}</span>
-              </div>
-            ))
+            <div className="history-table-wrapper">
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>Txn #</th>
+                    <th>Amount</th>
+                    <th>Campaign</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userDonations.map((donation, idx) => (
+                    <tr key={donation._id || donation.transactionNumber || idx}>
+                      <td>{donation.transactionNumber}</td>
+                      <td>₹{donation.amount}</td>
+                      <td>{getCampaignName(donation)}</td>
+                      <td>{new Date(donation.donatedAt || donation.date).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
-
       </div>
     </div>
   );

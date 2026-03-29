@@ -18,4 +18,32 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Create a payment for a donation
+import { generateTransactionNumber } from "../utils/generateTransactionNumber.js";
+
+router.post("/", async (req, res) => {
+  try {
+    const { transactionNumber, amount, paymentMethod = "razorpay", donationId, userId, campaignId } = req.body;
+    if (!transactionNumber || !amount || !donationId || !userId || !campaignId) {
+      return res.status(400).json({ message: "Missing required payment fields." });
+    }
+
+    const payment = new Payment({
+      transactionNumber,
+      amount,
+      paymentMethod,
+      gatewayResponse: "SUCCESS",
+      paymentStatus: "Completed",
+      donationId,
+      userId,
+      campaignId,
+    });
+    const savedPayment = await payment.save();
+    res.status(201).json(savedPayment);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: "Payment creation failed.", error: err.message });
+  }
+});
+
 export default router;

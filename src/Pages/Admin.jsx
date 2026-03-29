@@ -11,6 +11,7 @@ function Admin() {
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [editingCampaignId, setEditingCampaignId] = useState(null);
   const [editName, setEditName] = useState("");
@@ -33,8 +34,13 @@ function Admin() {
       setError("Please select today or a future date for campaign deadline.");
       return;
     }
+    if (!goal || Number(goal) <= 0) {
+      setError("Goal amount must be a positive number.");
+      return;
+    }
 
     setError("");
+    setSuccess("");
     const newEvent = {
       name,
       description,
@@ -50,8 +56,10 @@ function Admin() {
       setGoal("");
       setDescription("");
       setDeadline("");
+      setSuccess("Campaign created successfully.");
     } catch (err) {
       setError(err.response?.data?.message || "Unable to create campaign. Please try again.");
+      setSuccess("");
     }
   };
 
@@ -147,50 +155,57 @@ function Admin() {
         </div>
 
         {activeTab === "create" ? (
-          <div className="create-section">
-            <div className="create-card">
-              <form className="admin-form" onSubmit={handleCreate}>
-                <input
-                  type="text"
-                  placeholder="Campaign Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
+          <>
+            <div className="create-section" style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+              <div className="create-card">
+                <form className="admin-form" onSubmit={handleCreate}>
+                  <input
+                    type="text"
+                    placeholder="Campaign Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
 
-                <input
-                  type="number"
-                  placeholder="Goal Amount"
-                  value={goal}
-                  onChange={(e) => setGoal(e.target.value)}
-                  required
-                />
+                  <input
+                    type="number"
+                    placeholder="Goal Amount"
+                    value={goal}
+                    onChange={(e) => setGoal(e.target.value)}
+                    required
+                  />
 
-                <input
-                  type="date"
-                  value={deadline}
-                  min={today}
-                  onChange={(e) => {
-                    setDeadline(e.target.value);
-                    setError("");
-                  }}
-                  required
-                />
+                  <input
+                    type="date"
+                    value={deadline}
+                    min={today}
+                    onChange={(e) => {
+                      setDeadline(e.target.value);
+                      setError("");
+                    }}
+                    required
+                  />
 
-                {error && <p className="admin-error">{error}</p>}
+                  {error && <p className="admin-error">{error}</p>}
 
-                <input
-                  type="text"
-                  placeholder="Short Description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  required
-                />
+                  <input
+                    type="text"
+                    placeholder="Short Description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                  />
 
-                <button type="submit">Create Campaign</button>
-              </form>
+                  <button type="submit">Create Campaign</button>
+                </form>
+              </div>
+              {success && (
+                <div className="create-card" style={{marginTop: '0px', textAlign: 'center', maxWidth: 400, marginLeft: 'auto', marginRight: 'auto', padding: '4px 0'}}>
+                  <p className="admin-success">{success}</p>
+                </div>
+              )}
             </div>
-          </div>
+          </>
         ) : activeTab === "campaigns" ? (
           <div className="admin-grid">
             {campaigns.map((campaign) => {
@@ -248,7 +263,7 @@ function Admin() {
                     </div>
 
                     <p className="description">{campaign.description}</p>
-                    <p className="deadline">Deadline: {campaign.deadline}</p>
+                    <p className="deadline">Deadline: {campaign.deadline ? campaign.deadline.slice(0, 10) : ''}</p>
 
                     <div className="progress-bar">
                       <div className="progress-fill" style={{ width: `${progress}%` }}></div>
@@ -288,15 +303,17 @@ function Admin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {donationHistory.map((donation) => (
-                      <tr key={donation._id || donation.transactionNumber}>
-                        <td>{donation.transactionNumber}</td>
-                        <td>{donation.donorEmail}</td>
-                        <td>{donation.donorName}</td>
-                        <td>₹{donation.amount}</td>
-                        <td>{donation.campaignName}</td>
-                        <td>{new Date(donation.donatedAt).toLocaleString()}</td>
-                      </tr>
+                    {[...donationHistory]
+                      .sort((a, b) => new Date(b.donatedAt) - new Date(a.donatedAt))
+                      .map((donation) => (
+                        <tr key={donation._id || donation.transactionNumber}>
+                          <td>{donation.transactionNumber}</td>
+                          <td>{donation.donorEmail}</td>
+                          <td>{donation.donorName}</td>
+                          <td>₹{donation.amount}</td>
+                          <td>{donation.campaignName}</td>
+                          <td>{new Date(donation.donatedAt).toLocaleString()}</td>
+                        </tr>
                     ))}
                   </tbody>
                 </table>

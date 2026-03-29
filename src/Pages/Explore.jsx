@@ -43,7 +43,7 @@ function Explore() {
                   <div className="card-content">
                     <h3>{campaign.name}</h3>
                     <p className="description">{campaign.description}</p>
-                    <p className="deadline">Deadline: {campaign.deadline}</p>
+                    <p className="deadline">Deadline: {campaign.deadline ? campaign.deadline.slice(0, 10) : ''}</p>
                     {/* Progress */}
                     <div className="progress-bar">
                       <div
@@ -57,12 +57,22 @@ function Explore() {
                     </div>
                     {/* Role-Based Button */}
                     {user?.role === "user" && (
-                      <button
-                        className="view-btn"
-                        onClick={() => navigate(`/payment/${campaignId}`)}
-                      >
-                        Donate
-                      </button>
+                      campaign.status === "Completed" ? (
+                        <button
+                          className="view-btn completed-btn"
+                          onClick={() => navigate(`/payment/${campaignId}`)}
+                          style={{ color: "#fff", background: "#e53935" }}
+                        >
+                          Completed
+                        </button>
+                      ) : (
+                        <button
+                          className="view-btn"
+                          onClick={() => navigate(`/payment/${campaignId}`)}
+                        >
+                          Donate
+                        </button>
+                      )
                     )}
                     {!user && (
                       <button
