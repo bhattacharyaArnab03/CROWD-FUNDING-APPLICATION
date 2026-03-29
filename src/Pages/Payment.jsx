@@ -1,25 +1,45 @@
 
+
 import { useParams, useNavigate } from "react-router-dom";
-import { useContext, useState } from "react";
-import { CampaignContext } from "../context/CampaignContext";
+import { useContext, useState, useEffect } from "react";
+import { getCampaignById, donateToCampaign } from "../services/campaignService";
 import { AuthContext } from "../context/AuthContext";
 import "./Payment.css";
 
-
-
 function Payment() {
   const { id } = useParams();
-  const { campaigns, donateToCampaign } = useContext(CampaignContext);
   const { user } = useContext(AuthContext);
+  const [campaign, setCampaign] = useState(null);
   const [amount, setAmount] = useState("");
   const [receipt, setReceipt] = useState(null);
   const [donationError, setDonationError] = useState("");
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const campaign = campaigns.find(
-    (c) => String(c.id || c._id) === String(id)
-  );
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const data = await getCampaignById(id);
+        setCampaign(data);
+      } catch (err) {
+        setCampaign(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [id]);
 
+  if (loading) {
+    return (
+      <div className="payment-page">
+        <div className="payment-card">
+          <h2>Loading campaign...</h2>
+        </div>
+      </div>
+    );
+  }
 
   if (!campaign) {
     return (
@@ -68,21 +88,23 @@ function Payment() {
     }
 
     try {
-      await donateToCampaign(campaign.id, donationAmount, user);
+      const resp = await donateToCampaign(campaign.id || campaign._id, donationAmount, user);
       setDonationError("");
+      // Fallbacks for campaign name and transaction number
+      const campaignName = resp.campaign?.title || resp.campaign?.name || campaign.title || campaign.name || "Unknown";
+      const transactionNumber = resp.donation?.transactionNumber || resp.donation?.transactionId || resp.donation?._id || "N/A";
       setReceipt({
-        campaignName: campaign.name,
+        campaignName,
+        transactionNumber,
         userEmail: user?.email,
         amount: donationAmount,
         date: new Date().toLocaleString(),
-        goal: campaign.goal,
-        raised: campaign.raised + donationAmount,
+        goal: resp.campaign?.goal || campaign.goal,
+        raised: resp.campaign?.raised || campaign.raised + donationAmount,
       });
-      setAmount("");
     } catch (err) {
-      const message = err.response?.data?.message || err.message || "Donation failed.";
-      setDonationError(message);
-      alert(message);
+      setDonationError(err.message || "Donation failed");
+      alert(err.message || "Donation failed");
     }
   };
 
@@ -91,55 +113,37 @@ function Payment() {
       <div className="payment-card">
         {receipt ? (
           <div className="receipt">
-            <h2>Payment Successful!</h2>
-            <h3>Donation Receipt</h3>
-            <p><strong>Campaign:</strong> {receipt.campaignName}</p>
-            <p><strong>Donor Email:</strong> {receipt.userEmail}</p>
-            <p><strong>Amount:</strong> ₹{receipt.amount}</p>
-            <p><strong>Date:</strong> {receipt.date}</p>
-            <p><strong>Goal:</strong> ₹{receipt.goal}</p>
-            <p><strong>Total Raised (after donation):</strong> ₹{receipt.raised}</p>
-            <button onClick={() => navigate("/dashboard")}>Go to Dashboard</button>
+            <h3>Receipt</h3>
+            <p>Transaction ID: {receipt.transactionNumber || "N/A"}</p>
+            <p>Campaign: {receipt.campaignName || "Unknown"}</p>
+            <p>Email: {receipt.userEmail}</p>
+            <p>Amount: ₹{receipt.amount}</p>
+            <p>Date: {receipt.date}</p>
+            <p>Goal: ₹{receipt.goal}</p>
+            <p>Raised: ₹{receipt.raised}</p>
           </div>
         ) : (
           <>
-            <h2>Donate to {campaign.name}</h2>
-            <div className="campaign-info">
-              <p><strong>Goal:</strong> ₹{campaign.goal}</p>
-              <p><strong>Raised:</strong> ₹{campaign.raised}</p>
-              <p><strong>Deadline:</strong> {campaign.deadline}</p>
-            </div>
-            {remainingAmount <= 0 ? (
-              <div className="campaign-closed">
-                <p>This campaign is already fully funded.</p>
-                <button onClick={() => navigate("/dashboard")}>Back to Dashboard</button>
-              </div>
-            ) : (
-              <>
-                <form onSubmit={handlePayment}>
-                  <input
-                    type="number"
-                    placeholder={`Enter donation amount (up to ₹${remainingAmount})`}
-                    value={amount}
-                    onChange={(e) => {
-                      setAmount(e.target.value);
-                      if (donationError) setDonationError("");
-                    }}
-                    required
-                    min="1"
-                    max={remainingAmount}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!amount || Number(amount) <= 0}
-                  >
-                    Proceed to Pay
-                  </button>
-                </form>
-                {donationError && <p className="donation-error">{donationError}</p>}
-                <p className="donation-note">Remaining goal amount: ₹{remainingAmount}</p>
-              </>
-            )}
+            <h2>Payment for {campaign.name}</h2>
+            <form onSubmit={handlePayment}>
+              <input
+                type="number"
+                placeholder="Enter donation amount"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                min="1"
+                max={remainingAmount}
+                required
+              />
+              <button
+                type="submit"
+                disabled={!amount || Number(amount) <= 0}
+              >
+                Proceed to Pay
+              </button>
+            </form>
+            {donationError && <p className="donation-error">{donationError}</p>}
+            <p className="donation-note">Remaining goal amount: ₹{remainingAmount}</p>
           </>
         )}
       </div>

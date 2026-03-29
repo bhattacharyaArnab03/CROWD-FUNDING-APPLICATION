@@ -1,0 +1,6 @@
+.completed-btn {
+  background: #e53935 !important;
+  color: #fff !important;
+  cursor: default;
+  pointer-events: none;
+}

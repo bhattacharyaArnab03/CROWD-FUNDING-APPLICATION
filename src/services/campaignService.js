@@ -15,8 +15,10 @@ export function getCampaignById(id) {
   return apiRequest("get", `${API_BASE}/api/campaigns/${id}`);
 }
 
+
 export function donateToCampaign(id, amount, user) {
-  return apiRequest("post", `${API_BASE}/api/campaigns/${id}/donate`, {
+  return apiRequest("post", `${API_BASE}/api/donations`, {
+    campaignId: id,
     amount,
     userId: user?.id || user?._id,
     userEmail: user?.email,
