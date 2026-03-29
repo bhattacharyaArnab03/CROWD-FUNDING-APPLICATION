@@ -21,7 +21,7 @@ function Dashboard() {
         setDonations(donationData);
         setCampaigns(campaignData);
       } catch (err) {
-        // handle error if needed
+          setError("Failed to fetch campaigns");
       } finally {
         setLoading(false);
       }

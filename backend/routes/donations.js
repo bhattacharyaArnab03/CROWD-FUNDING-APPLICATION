@@ -1,9 +1,11 @@
 import { Router } from "express";
 import Donation from "../models/Donation.js";
+import Campaign from "../models/Campaign.js";
+import User from "../models/User.js";
+import { generateTransactionNumber, generatePaymentTransactionId } from "../utils/generateTransactionNumber.js";
 
 const router = Router();
 
-// GET /api/donations?userId=... or /api/donations?userEmail=...
 router.get("/", async (req, res) => {
   const { userId, userEmail } = req.query;
   let filter = {};
@@ -31,18 +33,15 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
-    const donation = await Donation.findById(req.params.id).lean();
-    if (!donation) return res.status(404).json({ message: "Donation not found." });
+    const donation=await Donation.findById(req.params.id).lean();
+    if (!donation) 
+      return res.status(404).json({ message: "Donation not found." });
     res.json(donation);
-  } catch {
+  } 
+  catch {
     res.status(400).json({ message: "Invalid donation ID." });
   }
 });
-
-import Campaign from "../models/Campaign.js";
-import User from "../models/User.js";
-import Payment from "../models/Payment.js";
-import { generateTransactionNumber, generatePaymentTransactionId } from "../utils/generateTransactionNumber.js";
 
 // POST /api/donations
 router.post("/", async (req, res) => {
@@ -55,7 +54,8 @@ router.post("/", async (req, res) => {
     }
 
     const campaign = await Campaign.findById(campaignId);
-    if (!campaign) return res.status(404).json({ message: "Campaign not found." });
+    if (!campaign) 
+      return res.status(404).json({ message: "Campaign not found." });
 
     const remainingAmount = campaign.goal - campaign.raised;
     if (remainingAmount <= 0) {
@@ -68,10 +68,9 @@ router.post("/", async (req, res) => {
     }
 
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found." });
+    if (!user) 
+      return res.status(404).json({ message: "User not found." });
 
-
-    // Ensure unique transaction number
     let txnNumber;
     let exists = true;
     while (exists) {
@@ -94,12 +93,18 @@ router.post("/", async (req, res) => {
 
     // Update campaign
     campaign.raised += donationAmount;
-    campaign.progress = campaign.goal > 0 ? Math.min(100, Math.round((campaign.raised / campaign.goal) * 100)) : 0;
+    if (campaign.goal > 0) {
+      campaign.progress = Math.min(100, Math.round((campaign.raised / campaign.goal) * 100));
+    } else {
+      campaign.progress = 0;
+    }
     if (campaign.raised >= campaign.goal) {
       campaign.status = "Completed";
-    } else if (campaign.deadline < new Date()) {
+    } 
+    else if (campaign.deadline < new Date()) {
       campaign.status = "Overdue";
-    } else {
+    } 
+    else {
       campaign.status = "Active";
     }
     await campaign.save();
@@ -122,7 +127,8 @@ router.post("/", async (req, res) => {
         campaignId: campaign._id,
       }
     });
-  } catch (err) {
+  } 
+  catch (err) {
     console.error(err);
     res.status(400).json({ message: "Donation failed.", error: err.message });
   }

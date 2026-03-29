@@ -32,7 +32,7 @@ function Admin() {
       try {
         const data = await getCampaigns();
         setCampaigns(data);
-      } catch (err) {
+      } catch {
         setError("Failed to load campaigns");
       }
     }
@@ -70,8 +70,8 @@ function Admin() {
       setDescription("");
       setDeadline("");
       setSuccess("Campaign created successfully.");
-    } catch (err) {
-      setError(err.response?.data?.message || "Unable to create campaign. Please try again.");
+    } catch {
+      setError("Unable to create campaign. Please try again.");
       setSuccess("");
     }
   };
@@ -93,8 +93,8 @@ function Admin() {
       try {
         const data = await getDonationHistory();
         setDonationHistory(data);
-      } catch (err) {
-        setHistoryError(err.response?.data?.message || err.message || "Unable to load donation history.");
+      } catch {
+        setHistoryError("Unable to load donation history.");
       }
     };
     loadHistory();
@@ -130,8 +130,8 @@ function Admin() {
       setCampaigns((prev) => prev.map((c) => (String(c.id || c._id) === String(campaignId) ? { ...c, ...updates } : c)));
       setEditingCampaignId(null);
       setEditError("");
-    } catch (err) {
-      setEditError(err.response?.data?.message || "Unable to update campaign currently.");
+    } catch {
+      setEditError("Unable to update campaign currently.");
     }
   };
 

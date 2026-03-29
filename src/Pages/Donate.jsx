@@ -18,7 +18,7 @@ function Donate() {
       try {
         const data = await getCampaignById(id);
         setCampaign(data);
-      } catch (err) {
+      } catch {
         setError("Failed to load campaign");
       } finally {
         setLoading(false);

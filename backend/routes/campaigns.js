@@ -2,15 +2,12 @@ import { Router } from "express";
 import Campaign from "../models/Campaign.js";
 import Donation from "../models/Donation.js";
 
-import Payment from "../models/Payment.js";
-import User from "../models/User.js";
-import { generateTransactionNumber, generatePaymentTransactionId } from "../utils/generateTransactionNumber.js";
 import { updateCampaignFields } from "../services/campaignService.js";
 
 const router = Router();
 
 const calculateProgress = (campaign) =>
-  Math.min(100, Math.round((campaign.raised / campaign.goal) * 100));
+  Math.min(100, Math.round((campaign.raisedAmount / campaign.goalAmount) * 100));
 
 // Update campaign statuses before returning
 router.get("/", async (req, res) => {

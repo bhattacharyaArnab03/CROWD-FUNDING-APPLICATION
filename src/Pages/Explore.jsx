@@ -19,9 +19,9 @@ function Explore() {
     async function fetchData() {
       setLoading(true);
       try {
-        const data = await getCampaigns();
         setCampaigns(data);
       } catch (err) {
+        } catch {
         setError("Failed to load campaigns");
       } finally {
         setLoading(false);

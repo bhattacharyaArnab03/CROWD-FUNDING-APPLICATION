@@ -1,6 +1,6 @@
 
 
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useContext, useState, useEffect } from "react";
 import { getCampaignById, donateToCampaign } from "../services/campaignService";
 import { AuthContext } from "../context/AuthContext";
@@ -14,7 +14,7 @@ function Payment() {
   const [receipt, setReceipt] = useState(null);
   const [donationError, setDonationError] = useState("");
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  // ...existing code...
 
   useEffect(() => {
     async function fetchData() {
@@ -22,7 +22,7 @@ function Payment() {
       try {
         const data = await getCampaignById(id);
         setCampaign(data);
-      } catch (err) {
+      } catch {
         setCampaign(null);
       } finally {
         setLoading(false);
@@ -102,7 +102,8 @@ function Payment() {
         goal: resp.campaign?.goal || campaign.goal,
         raised: resp.campaign?.raised || campaign.raised + donationAmount,
       });
-    } catch (err) {
+    } 
+    catch (err) {
       setDonationError(err.message || "Donation failed");
       alert(err.message || "Donation failed");
     }
