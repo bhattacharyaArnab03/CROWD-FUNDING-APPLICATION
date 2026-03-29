@@ -15,12 +15,10 @@ const ensureAdmin = async () => {
 
 
   const admin = new User({
-    transactionNumber: generateTransactionNumber(),
     name: "Admin User",
-    email,
+    email: "admin@example.com",
     password: "Admin123!",
-    role: "admin",
-    totalDonated: 0,
+    role: "admin"
   });
 
   await admin.save();

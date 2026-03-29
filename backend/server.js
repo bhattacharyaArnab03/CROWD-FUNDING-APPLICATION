@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import session from "express-session";
+import { getSessionMiddleware } from "./config/session.js";
 import { connectDB } from "./config/db.js";
 import usersRouter from "./routes/users.js";
 import campaignsRouter from "./routes/campaigns.js";
@@ -17,18 +17,9 @@ app.use(express.json());
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 
 // Session middleware
-app.use(
-  session({
-    secret: 'crowd-fund-session-secret-key', // Change this to a strong secret in production
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false, // Set to true if using HTTPS
-      httpOnly: true,
-      maxAge: 1000 * 60 * 60 * 24, // 1 day
-    },
-  })
-);
+// Use persistent MongoDB session store
+const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/crowdfunding";
+app.use(getSessionMiddleware(MONGO_URI));
 
 app.get("/api", (req, res) => {
   res.json({ message: "Crowdfunding backend API is running." });
