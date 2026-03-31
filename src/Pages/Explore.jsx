@@ -20,10 +20,11 @@ function Explore() {
       setLoading(true);
       try {
         setCampaigns(data);
-      } catch (err) {
-        } catch {
+      } 
+      catch {
         setError("Failed to load campaigns");
-      } finally {
+      } 
+      finally {
         setLoading(false);
       }
     }
