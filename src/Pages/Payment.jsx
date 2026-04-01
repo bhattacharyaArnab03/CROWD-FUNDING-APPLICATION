@@ -2,7 +2,7 @@
 
 import { useParams } from "react-router-dom";
 import { useContext, useState, useEffect } from "react";
-import { getCampaignById, donateToCampaign } from "../services/campaignService";
+import { useCampaign } from "../context/CampaignContext";
 import { AuthContext } from "../context/AuthContext";
 import "./Payment.css";
 
@@ -14,7 +14,7 @@ function Payment() {
   const [receipt, setReceipt] = useState(null);
   const [donationError, setDonationError] = useState("");
   const [loading, setLoading] = useState(true);
-  // ...existing code...
+  const { getCampaignById, donateToCampaign } = useCampaign();
 
   useEffect(() => {
     async function fetchData() {
@@ -29,7 +29,7 @@ function Payment() {
       }
     }
     fetchData();
-  }, [id]);
+  }, [id, getCampaignById]);
 
   if (loading) {
     return (
@@ -102,8 +102,7 @@ function Payment() {
         goal: resp.campaign?.goal || campaign.goal,
         raised: resp.campaign?.raised || campaign.raised + donationAmount,
       });
-    } 
-    catch (err) {
+    } catch (err) {
       setDonationError(err.message || "Donation failed");
       alert(err.message || "Donation failed");
     }
@@ -150,6 +149,6 @@ function Payment() {
       </div>
     </div>
   );
-}
 
+}
 export default Payment;

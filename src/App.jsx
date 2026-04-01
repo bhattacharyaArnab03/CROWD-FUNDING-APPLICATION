@@ -16,7 +16,14 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
 
-        <Route path="/auth" element={<Auth />} />
+        <Route
+          path="/auth"
+          element={
+            <ProtectedRoute guestOnly>
+              <Auth />
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="/explore" element={<Explore />} />
 

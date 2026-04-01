@@ -1,14 +1,16 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getCampaignById } from "../services/campaignService";
+import { useCampaign } from "../context/CampaignContext";
 import ProgressBar from "../Components/ProgressBar";
 
 function Campaign() {
   const { id } = useParams();
-  const [campaign, setCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [campaign, setCampaign] = useState(null);
+
+  const { getCampaignById } = useCampaign();
 
   useEffect(() => {
     async function fetchData() {
@@ -16,6 +18,7 @@ function Campaign() {
       try {
         const data = await getCampaignById(id);
         setCampaign(data);
+        setError(null);
       } catch (err) {
         setError("Failed to load campaign");
       } finally {
@@ -23,7 +26,7 @@ function Campaign() {
       }
     }
     fetchData();
-  }, [id]);
+  }, [id, getCampaignById]);
 
   if (loading) 
     return <p>Loading campaign...</p>;

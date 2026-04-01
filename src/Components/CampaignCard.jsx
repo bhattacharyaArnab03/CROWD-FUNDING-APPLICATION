@@ -1,8 +1,7 @@
-
+import ProgressBar from "./ProgressBar";
 import "./CampaignCard.css";
 
 function CampaignCard({ campaign, user, onDonate, onLogin }) {
-  const progress = campaign.goal > 0 ? (campaign.raised / campaign.goal) * 100 : 0;
   const campaignId = campaign.id || campaign._id;
   return (
     <div className="campaign-card" key={campaignId}>
@@ -11,12 +10,7 @@ function CampaignCard({ campaign, user, onDonate, onLogin }) {
         <p className="description">{campaign.description}</p>
         <p className="deadline">Deadline: {campaign.deadline ? campaign.deadline.slice(0, 10) : ''}</p>
         {/* Progress */}
-        <div className="progress-bar">
-          <div
-            className="progress-fill"
-            style={{ width: `${progress}%` }}
-          ></div>
-        </div>
+        <ProgressBar raised={campaign.raised} goal={campaign.goal} />
         <div className="fund-info">
           <span>₹{campaign.raised} Raised</span>
           <span>Goal ₹{campaign.goal}</span>

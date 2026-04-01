@@ -1,32 +1,32 @@
 
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { getUserDonations, getCampaigns } from "../services/campaignService";
+import { useCampaign } from "../context/CampaignContext";
 import "./Dashboard.css";
 
 function Dashboard() {
   const { user } = useContext(AuthContext);
   const [donations, setDonations] = useState([]);
-  const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { campaigns, fetchCampaigns, getUserDonations } = useCampaign();
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       try {
-        const [donationData, campaignData] = await Promise.all([
+        const [donationData] = await Promise.all([
           getUserDonations({ userId: user?.id || user?._id, userEmail: user?.email }),
-          getCampaigns(),
+          fetchCampaigns(),
         ]);
         setDonations(donationData);
-        setCampaigns(campaignData);
       } catch (err) {
-          setError("Failed to fetch campaigns");
+        // Optionally handle error
       } finally {
         setLoading(false);
       }
     }
     if (user) fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // Sort donations by date descending (most recent first)

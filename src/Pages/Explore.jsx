@@ -1,35 +1,29 @@
 
 
-import { useEffect, useState, useContext } from "react";
+
+import { useEffect, useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCampaigns } from "../services/campaignService";
 import { AuthContext } from "../context/AuthContext";
+import { useCampaign } from "../context/CampaignContext";
 import CampaignCard from "../Components/CampaignCard";
 import "./Explore.css";
 
 
+
 function Explore() {
-  const [campaigns, setCampaigns] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { campaigns, fetchCampaigns } = useCampaign();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       setLoading(true);
-      try {
-        setCampaigns(data);
-      } 
-      catch {
-        setError("Failed to load campaigns");
-      } 
-      finally {
-        setLoading(false);
-      }
-    }
+      await fetchCampaigns();
+      setLoading(false);
+    };
     fetchData();
-  }, []);
+  }, [fetchCampaigns]);
 
   return (
     <div className="explore-page">
@@ -46,8 +40,6 @@ function Explore() {
       <div className="campaign-section">
         {loading ? (
           <div className="no-campaigns"><h3>Loading campaigns...</h3></div>
-        ) : error ? (
-          <div className="no-campaigns"><h3>{error}</h3></div>
         ) : campaigns.length === 0 ? (
           <div className="no-campaigns">
             <h3>No campaigns available</h3>

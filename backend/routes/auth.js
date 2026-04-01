@@ -4,23 +4,37 @@ import User from "../models/User.js";
 const router = Router();
 
 router.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password) {
-    return res.status(400).json({ message: "Name, email and password are required" });
-  }
-  const existing = await User.findOne({ email });
-  if (existing) {
-    return res.status(400).json({ message: "User already exists" });
-  }
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Name, email and password are required" });
+    }
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ message: "User already exists" });
+    }
 
-  const user = await User.create({
-    name,
-    email,
-    password,
-    role: "user",
-    totalDonated: 0
-  });
-  res.status(201).json({ id: user._id, name: user.name, email: user.email, role: user.role });
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: "user",
+      totalDonated: 0
+    });
+
+    // Set user info in session
+    req.session.user = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    res.status(201).json({ id: user._id, name: user.name, email: user.email, role: user.role });
+  } catch (err) {
+    console.error("Registration error:", err);
+    res.status(500).json({ message: err.message || "Registration failed on server" });
+  }
 });
 
 
@@ -49,13 +63,8 @@ router.post("/login", async (req, res) => {
 
 // Logout: destroy session
 router.post("/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ message: "Logout failed" });
-    }
-    res.clearCookie("connect.sid");
-    res.json({ message: "Logged out successfully" });
-  });
+  req.session = null;
+  res.json({ message: "Logged out successfully" });
 });
 
 // Get current user from session

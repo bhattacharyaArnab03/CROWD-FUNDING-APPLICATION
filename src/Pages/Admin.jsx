@@ -1,11 +1,11 @@
 
 import { useEffect, useState } from "react";
-import { getCampaigns, createCampaign, updateCampaign as updateCampaignApi, getDonationHistory } from "../services/campaignService";
+import { useCampaign } from "../context/CampaignContext";
 import "./Admin.css";
 import CampaignCard from "../Components/CampaignCard";
 
 function Admin() {
-  const [campaigns, setCampaigns] = useState([]);
+  const { campaigns, fetchCampaigns, createCampaign, updateCampaign, getDonationHistory } = useCampaign();
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
   const [description, setDescription] = useState("");
@@ -30,13 +30,13 @@ function Admin() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const data = await getCampaigns();
-        setCampaigns(data);
+        await fetchCampaigns();
       } catch {
         setError("Failed to load campaigns");
       }
     }
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCreate = async (e) => {
@@ -54,7 +54,7 @@ function Admin() {
     setError("");
     setSuccess("");
     const newEvent = {
-      name,
+      title: name,
       description,
       goal: Number(goal),
       raised: 0,
@@ -64,7 +64,7 @@ function Admin() {
 
     try {
       const created = await createCampaign(newEvent);
-      setCampaigns((prev) => [...prev, created]);
+      fetchCampaigns();
       setName("");
       setGoal("");
       setDescription("");
@@ -98,6 +98,7 @@ function Admin() {
       }
     };
     loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cancelEdit = () => {
@@ -118,7 +119,7 @@ function Admin() {
     }
 
     const updates = {
-      name: editName,
+      title: editName,
       description: editDescription,
       goal: Number(editGoal),
       deadline: editDeadline,
@@ -126,8 +127,8 @@ function Admin() {
     };
 
     try {
-      await updateCampaignApi(campaignId, updates);
-      setCampaigns((prev) => prev.map((c) => (String(c.id || c._id) === String(campaignId) ? { ...c, ...updates } : c)));
+      await updateCampaign(campaignId, updates);
+      fetchCampaigns();
       setEditingCampaignId(null);
       setEditError("");
     } catch {
