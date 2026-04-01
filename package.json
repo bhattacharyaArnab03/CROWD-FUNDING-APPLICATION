@@ -16,6 +16,7 @@
     "start": "npm run microservices"
   },
   "dependencies": {
+    "amqplib": "^1.0.3",
     "axios": "^1.14.0",
     "cookie-session": "^2.1.1",
     "cors": "^2.8.5",

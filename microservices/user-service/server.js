@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieSession from "cookie-session";
 import { connectDB } from "./config/db.js";
+import { connectRabbitMQListener } from "./rabbitmq.js";
 import usersRouter from "./routes/users.js";
 import authRouter from "./routes/auth.js";
 
@@ -24,6 +25,7 @@ app.use("/api/auth", authRouter);
 
 const start = async () => {
   await connectDB();
+  await connectRabbitMQListener();
   app.listen(PORT, () => {
     console.log("Service running on port " + PORT);
   });

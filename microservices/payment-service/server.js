@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieSession from "cookie-session";
 import { connectDB } from "./config/db.js";
+import { connectRabbitMQ } from "./rabbitmq.js";
 import donationsRouter from "./routes/donations.js";
 import paymentsRouter from "./routes/payments.js";
 
@@ -24,6 +25,7 @@ app.use("/api/payments", paymentsRouter);
 
 const start = async () => {
   await connectDB();
+  await connectRabbitMQ();
   app.listen(PORT, () => {
     console.log("Service running on port " + PORT);
   });

@@ -3,6 +3,7 @@ import { Router } from "express";
 import axios from "axios";
 import Donation from "../models/Donation.js";
 import { generateTransactionNumber, generatePaymentTransactionId } from "../utils/generateTransactionNumber.js";
+import { publishDonationEvent } from "../rabbitmq.js";
 
 const router = Router();
 
@@ -68,6 +69,8 @@ router.get("/:id", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
+  const startTime = Date.now();
+  console.log("⏱️ [Payment Service] Processing incoming donation...");
   try {
     const { campaignId, userId, amount, paymentMethod = "razorpay", userEmail, remarks } = req.body;
     const donationAmount = Number(amount);
@@ -122,20 +125,36 @@ router.post("/", async (req, res) => {
     });
     const savedDonation = await donation.save();
 
-    // 1. Atomically update Campaign Raised Amount
-    try {
-      const resCamp = await axios.patch(`http://localhost:5002/api/campaigns/${campaign._id}/add-funds`, { amount: donationAmount });
-      campaign = resCamp.data; // Sync to return updated campaign explicitly   
-    } catch (e) {
-      console.log("Failed to update campaign raised amount atomically:", e.message);
+    // Fire & Forget: Event-driven Messaging (RabbitMQ)
+    console.log("➡️ [Payment Service] Attempting to Dispatch Event to Queue...");
+    const isAsyncSent = await publishDonationEvent({
+      campaignId: campaign._id,
+      userId: user._id,
+      amount: donationAmount
+    });
+
+    if (!isAsyncSent) {
+      console.log("⚠️ [Payment Service] Message Broker Offline! Executing SYNCHRONOUS HTTP blocking fallback...");
+      // Fallback: Synchronous HTTP if RabbitMQ is offline
+      // 1. Atomically update Campaign Raised Amount
+      try {
+        const resCamp = await axios.patch(`http://localhost:5002/api/campaigns/${campaign._id}/add-funds`, { amount: donationAmount });
+        campaign = resCamp.data; // Sync to return updated campaign explicitly    
+      } catch (e) {
+        console.log("Failed to update campaign raised amount atomically:", e.message);
+      }
+
+      // 2. Atomically update User Total Donated
+      try {
+        await axios.patch(`http://localhost:5001/api/users/${user._id}/totalDonated`, { amount: donationAmount });
+      } catch (e) {
+        console.log("Failed to update user total donated atomically:", e.message);
+      }
+      console.log("⚠️ [Payment Service] Synchronous processing complete. Proceeding to User response...");
     }
 
-    // 2. Atomically update User Total Donated
-    try {
-      await axios.patch(`http://localhost:5001/api/users/${user._id}/totalDonated`, { amount: donationAmount });
-    } catch (e) {
-      console.log("Failed to update user total donated atomically:", e.message);
-    }
+    const endTime = Date.now();
+    console.log(`🚀 [PERFORMANCE] Payment successfully processed. Total HTTP Response Time: ${endTime - startTime}ms`);
 
     res.status(201).json({
       campaign,
