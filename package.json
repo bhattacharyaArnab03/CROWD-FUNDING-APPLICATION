@@ -7,15 +7,20 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "backend": "node backend/server.js",
-    "start": "concurrently \"npm run backend\" \"npm run dev\""
+    "gateway": "node microservices/api-gateway/server.js",
+    "user-service": "node microservices/user-service/server.js",
+    "campaign-service": "node microservices/campaign-service/server.js",
+    "payment-service": "node microservices/payment-service/server.js",
+    "microservices": "concurrently \"npm run gateway\" \"npm run user-service\" \"npm run campaign-service\" \"npm run payment-service\" \"npm run dev\"",
+    "start": "npm run microservices"
   },
   "dependencies": {
-    "axios": "^1.4.0",
+    "axios": "^1.14.0",
     "cookie-session": "^2.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "http-proxy-middleware": "^3.0.5",
     "mongoose": "^7.3.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

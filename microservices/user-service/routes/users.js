@@ -1,6 +1,6 @@
 import { Router } from "express";
 import User from "../models/User.js";
-import Donation from "../models/Donation.js";
+import axios from "axios";
 
 const router = Router();
 
@@ -23,11 +23,11 @@ router.get("/:id", async (req, res) => {
 
 router.get("/:id/donations", async (req, res) => {
   try {
-    const donations = await Donation.find({ userId: req.params.id }).lean();
-    res.json(donations);
-  } 
-  catch {
-    res.status(400).json({ message: "Invalid user ID." });
+    const response = await axios.get(`http://localhost:5003/api/donations?userId=${req.params.id}`);    
+    res.json(response.data);
+  }
+  catch (err) {
+    res.status(400).json({ message: "Invalid user ID or Payment Service unavailable." });
   }
 });
 
@@ -51,6 +51,20 @@ router.post("/", async (req, res) => {
 
   const saved = await newUser.save();
   res.status(201).json(saved);
+});
+
+router.patch("/:id/totalDonated", async (req, res) => {
+  try {
+    const amount = Number(req.body.amount);
+    if (!amount) return res.status(400).json({ message: "Invalid amount." });
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found." });
+    user.totalDonated = (user.totalDonated || 0) + amount;
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ message: "Failed to update total donated." });
+  }
 });
 
 export default router;

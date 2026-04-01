@@ -1,6 +1,6 @@
 import { Router } from "express";
 import Campaign from "../models/Campaign.js";
-import Donation from "../models/Donation.js";
+import axios from "axios";
 
 import { updateCampaignFields } from "../services/campaignService.js";
 
@@ -46,10 +46,11 @@ router.get("/:id", async (req, res) => {
 
 router.get("/:id/donations", async (req, res) => {
   try {
-    const donations = await Donation.find({ campaignId: req.params.id }).lean();
-    res.json(donations);
-  } catch {
-    res.status(400).json({ message: "Invalid campaign ID." });
+    // Instead of querying locally, make a request to the Payment Service
+    const response = await axios.get(`http://localhost:5003/api/donations?campaignId=${req.params.id}`);
+    res.json(response.data);
+  } catch (err) {
+    res.status(400).json({ message: "Invalid campaign ID or Payment Service unavailable." });
   }
 });
 
