@@ -11,6 +11,7 @@
     "user-service": "node microservices/user-service/server.js",
     "campaign-service": "node microservices/campaign-service/server.js",
     "payment-service": "node microservices/payment-service/server.js",
+    "premicroservices": "npx kill-port 5000 5001 5002 5003 5173 || exit 0",
     "microservices": "concurrently \"npm run gateway\" \"npm run user-service\" \"npm run campaign-service\" \"npm run payment-service\" \"npm run dev\"",
     "start": "npm run microservices"
   },
@@ -24,11 +25,13 @@
     "mongoose": "^7.3.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.0"
+    "react-router-dom": "^6.22.0",
+    "redis": "^5.11.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
     "concurrently": "^8.2.0",
+    "kill-port": "^2.0.1",
     "vite": "^5.0.0"
   }
 }

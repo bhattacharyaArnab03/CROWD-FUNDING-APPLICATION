@@ -122,17 +122,19 @@ router.post("/", async (req, res) => {
     });
     const savedDonation = await donation.save();
 
-    const newRaised = campaign.raised + donationAmount;
+    // 1. Atomically update Campaign Raised Amount
     try {
-      await axios.put(`http://localhost:5002/api/campaigns/${campaign._id}`, { raised: newRaised });
+      const resCamp = await axios.patch(`http://localhost:5002/api/campaigns/${campaign._id}/add-funds`, { amount: donationAmount });
+      campaign = resCamp.data; // Sync to return updated campaign explicitly   
     } catch (e) {
-      console.log("Failed to update campaign raised amount via inter-service HTTP.");
+      console.log("Failed to update campaign raised amount atomically:", e.message);
     }
 
+    // 2. Atomically update User Total Donated
     try {
       await axios.patch(`http://localhost:5001/api/users/${user._id}/totalDonated`, { amount: donationAmount });
     } catch (e) {
-      console.log("Failed to update user total donated via inter-service HTTP.");
+      console.log("Failed to update user total donated atomically:", e.message);
     }
 
     res.status(201).json({

@@ -57,10 +57,16 @@ router.patch("/:id/totalDonated", async (req, res) => {
   try {
     const amount = Number(req.body.amount);
     if (!amount) return res.status(400).json({ message: "Invalid amount." });
-    const user = await User.findById(req.params.id);
+    
+    // Atomic increment solves database race conditions for totalDonated
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { totalDonated: amount } },
+      { new: true } // Returns updated record
+    );
+
     if (!user) return res.status(404).json({ message: "User not found." });
-    user.totalDonated = (user.totalDonated || 0) + amount;
-    await user.save();
+    
     res.json(user);
   } catch (err) {
     res.status(400).json({ message: "Failed to update total donated." });
