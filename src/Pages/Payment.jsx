@@ -1,8 +1,8 @@
 
 
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useContext, useState, useEffect } from "react";
-import { getCampaignById, donateToCampaign } from "../services/campaignService";
+import { useCampaign } from "../context/CampaignContext";
 import { AuthContext } from "../context/AuthContext";
 import "./Payment.css";
 
@@ -14,7 +14,7 @@ function Payment() {
   const [receipt, setReceipt] = useState(null);
   const [donationError, setDonationError] = useState("");
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const { getCampaignById, donateToCampaign } = useCampaign();
 
   useEffect(() => {
     async function fetchData() {
@@ -22,14 +22,14 @@ function Payment() {
       try {
         const data = await getCampaignById(id);
         setCampaign(data);
-      } catch (err) {
+      } catch {
         setCampaign(null);
       } finally {
         setLoading(false);
       }
     }
     fetchData();
-  }, [id]);
+  }, [id, getCampaignById]);
 
   if (loading) {
     return (
@@ -149,6 +149,6 @@ function Payment() {
       </div>
     </div>
   );
-}
 
+}
 export default Payment;

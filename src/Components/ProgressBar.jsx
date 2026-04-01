@@ -1,9 +1,9 @@
 function ProgressBar({ raised, goal }) {
-  const percent = (raised / goal) * 100;
+  const percent = goal > 0 ? (raised / goal) * 100 : 0;
 
   return (
-    <div className="progress">
-      <div className="fill" style={{ width: `${percent}%` }}></div>
+    <div className="progress-bar">
+      <div className="progress-fill" style={{ width: `${Math.min(percent, 100)}%` }}></div>
     </div>
   );
 }

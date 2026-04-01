@@ -1,16 +1,18 @@
 
 import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
-import { getCampaignById, donateToCampaign } from "../services/campaignService";
+import { useCampaign } from "../context/CampaignContext";
 import { AuthContext } from "../context/AuthContext";
 
 function Donate() {
   const { id } = useParams();
   const { user } = useContext(AuthContext);
-  const [campaign, setCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [amount, setAmount] = useState("");
+  const [campaign, setCampaign] = useState(null);
+
+  const { getCampaignById, donateToCampaign } = useCampaign();
 
   useEffect(() => {
     async function fetchData() {
@@ -18,6 +20,7 @@ function Donate() {
       try {
         const data = await getCampaignById(id);
         setCampaign(data);
+        setError(null);
       } catch (err) {
         setError("Failed to load campaign");
       } finally {
@@ -25,7 +28,7 @@ function Donate() {
       }
     }
     fetchData();
-  }, [id]);
+  }, [id, getCampaignById]);
 
   if (loading) return <p>Loading campaign...</p>;
   if (error) return <p>Error: {error}</p>;
