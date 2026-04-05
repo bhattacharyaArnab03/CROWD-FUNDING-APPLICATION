@@ -33,7 +33,7 @@ router.post("/register", async (req, res) => {
     res.status(201).json({ id: user._id, name: user.name, email: user.email, role: user.role });
   } catch (err) {
     console.error("Registration error:", err);
-    res.status(500).json({ message: err.message || "Registration failed on server" });
+    res.status(500).json({ error: "An unexpected error occurred during registration." });
   }
 });
 

@@ -1,14 +1,9 @@
-
-
-
 import { useEffect, useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { useCampaign } from "../context/CampaignContext";
 import CampaignCard from "../Components/CampaignCard";
 import "./Explore.css";
-
-
 
 function Explore() {
   const { user } = useContext(AuthContext);

@@ -8,6 +8,8 @@ function Dashboard() {
   const { user } = useContext(AuthContext);
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const { campaigns, fetchCampaigns, getUserDonations } = useCampaign();
 
   useEffect(() => {
@@ -51,6 +53,12 @@ function Dashboard() {
     0
   );
 
+  const totalPages = Math.ceil(userDonations.length / itemsPerPage);
+  const paginatedDonations = userDonations.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div className="dashboard-page">
       <div className="dashboard-hero">
@@ -61,11 +69,11 @@ function Dashboard() {
       <div className="dashboard-section">
         <div className="stats-grid">
           <div className="stat-card">
-            <h3>₹{totalDonated}</h3>
+            <h3>{loading ? "..." : `₹${totalDonated}`}</h3>
             <p>Total Donated</p>
           </div>
           <div className="stat-card">
-            <h3>{userDonations.length}</h3>
+            <h3>{loading ? "..." : userDonations.length}</h3>
             <p>Total Donations</p>
           </div>
         </div>
@@ -77,8 +85,9 @@ function Dashboard() {
           ) : userDonations.length === 0 ? (
             <p>No donations yet.</p>
           ) : (
-            <div className="history-table-wrapper">
-              <table className="history-table">
+            <>
+              <div className="history-table-wrapper">
+                <table className="history-table">
                 <thead>
                   <tr>
                     <th>Txn #</th>
@@ -88,7 +97,7 @@ function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {userDonations.map((donation, idx) => (
+                  {paginatedDonations.map((donation, idx) => (
                     <tr key={donation._id || donation.transactionNumber || idx}>
                       <td>{donation.transactionNumber}</td>
                       <td>₹{donation.amount}</td>
@@ -99,7 +108,27 @@ function Dashboard() {
                 </tbody>
               </table>
             </div>
-          )}
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button 
+                  disabled={currentPage === 1} 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                >
+                  Previous
+                </button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <button 
+                  disabled={currentPage === totalPages} 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
         </div>
       </div>
     </div>

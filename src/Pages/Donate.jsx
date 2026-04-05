@@ -46,7 +46,8 @@ function Donate() {
       alert("Donation Successful");
       setAmount("");
     } catch (err) {
-      alert("Donation failed: " + (err.message || "Unknown error"));
+      const errorMessage = err.response?.data?.message || err.message || "Unknown error";
+      alert("Donation failed: " + errorMessage);
     }
   }
 

@@ -1,6 +1,6 @@
 
 
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useContext, useState, useEffect } from "react";
 import { useCampaign } from "../context/CampaignContext";
 import { AuthContext } from "../context/AuthContext";
@@ -8,6 +8,7 @@ import "./Payment.css";
 
 function Payment() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const [campaign, setCampaign] = useState(null);
   const [amount, setAmount] = useState("");
@@ -103,8 +104,9 @@ function Payment() {
         raised: resp.campaign?.raised || campaign.raised + donationAmount,
       });
     } catch (err) {
-      setDonationError(err.message || "Donation failed");
-      alert(err.message || "Donation failed");
+      const errorMessage = err.response?.data?.message || err.message || "Donation failed";
+      setDonationError(errorMessage);
+      alert(errorMessage);
     }
   };
 
@@ -113,6 +115,7 @@ function Payment() {
       <div className="payment-card">
         {receipt ? (
           <div className="receipt">
+            <button className="close-receipt-btn" onClick={() => navigate("/dashboard")}>&times;</button>
             <h3>Receipt</h3>
             <p>Transaction ID: {receipt.transactionNumber || "N/A"}</p>
             <p>Campaign: {receipt.campaignName || "Unknown"}</p>

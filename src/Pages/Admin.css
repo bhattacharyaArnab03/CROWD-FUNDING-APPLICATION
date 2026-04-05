@@ -248,6 +248,32 @@
   background: #f8fafc;
 }
 
+/* Pagination */
+.pagination {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+.pagination button {
+  padding: 8px 16px;
+  border-radius: 5px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.pagination button:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+.pagination span {
+  font-weight: 600;
+  color: #1e293b;
+}
+
 .save-btn {
   background-color: #22c55e;
   color: white;
