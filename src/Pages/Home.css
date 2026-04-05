@@ -2,12 +2,21 @@
   font-family: Arial, sans-serif;
 }
 
+/* Reset page margins to ensure full-bleed sections */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: transparent;
+}
+
 /* HERO SECTION */
 .hero {
   background: linear-gradient(135deg, #1e3a8a, #0f172a);
   color: white;
-  padding: 100px 20px;
+  padding: 0; /* remove padding so slides go edge-to-edge */
   text-align: center;
+  overflow: hidden;
 }
 
 /* smooth SVG wave between hero and features */
@@ -58,6 +67,9 @@
 .hero-content {
   position: relative;
   z-index: 2; /* ensure content sits above images */
+  max-width: 750px;
+  margin: auto;
+  padding: 100px 20px; /* move visual spacing into content so slides stay full-bleed */
 }
 
 .hero-arrow {
@@ -84,9 +96,23 @@
 .hero-arrow--left { left: 18px; }
 .hero-arrow--right { right: 18px; }
 
-.hero-content {
-  max-width: 750px;
-  margin: auto;
+.hero-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  background: rgba(255,255,255,0.12);
+  color: white;
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
 }
 
 .hero h1 {
