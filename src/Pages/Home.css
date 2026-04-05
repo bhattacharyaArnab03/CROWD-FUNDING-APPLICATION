@@ -162,9 +162,9 @@ html, body, #root {
 
 /* FEATURES (below hero) */
 .features {
-  background: linear-gradient(135deg, #dbd9d9, #000103);
+  background: linear-gradient(-180deg, #dbd9d9, #000103);
   padding: 40px 20px 80px;
-  margin-top: -6px; /* pulls section up slightly to hide any seam */
+  margin-top: -6px; 
 }
 
 .features-inner {

@@ -15,7 +15,6 @@ function Explore() {
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
   const [viewMode, setViewMode] = useState("featured"); // featured | trending | latest | all
-  const [deadlineFilter, setDeadlineFilter] = useState("all");
 
   const [donations, setDonations] = useState([]);
 
@@ -101,9 +100,8 @@ function Explore() {
       .map((x) => x.campaign);
   }, [campaigns, donationsByCampaign]);
 
-  // Filtered campaigns based on applied search and deadline
+  // Filtered campaigns based on applied search
   const filteredCampaigns = useMemo(() => {
-    const now = Date.now();
     return (campaigns || []).filter((c) => {
       if (!c) return false;
       const title = (c.title || "").toLowerCase();
@@ -112,15 +110,9 @@ function Explore() {
       if (searchKey) {
         if (!title.includes(searchKey) && !desc.includes(searchKey)) return false;
       }
-      if (deadlineFilter === "ending_soon") {
-        const daysLeft = Math.ceil((new Date(c.deadline).getTime() - now) / (1000 * 60 * 60 * 24));
-        if (daysLeft > 7) return false;
-      } else if (deadlineFilter === "expired") {
-        if (new Date(c.deadline).getTime() >= now) return false;
-      }
       return true;
     });
-  }, [campaigns, appliedQuery, deadlineFilter]);
+  }, [campaigns, appliedQuery]);
 
   return (
     <div className="explore-page">
@@ -135,17 +127,12 @@ function Explore() {
         <div className="search-row">
           <input
             aria-label="Search campaigns"
-            placeholder="Search by title or description"
+            placeholder="Search by title"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
           />
           <button className="search-btn" onClick={handleSearch}>Search</button>
-          <select value={deadlineFilter} onChange={(e) => setDeadlineFilter(e.target.value)}>
-            <option value="all">All deadlines</option>
-            <option value="ending_soon">Ending in 7 days</option>
-            <option value="expired">Expired</option>
-          </select>
         </div>
 
         <div className="section-toggle">
