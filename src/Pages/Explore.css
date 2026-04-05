@@ -29,8 +29,115 @@
 
 /* CAMPAIGN SECTION */
 .campaign-section {
-  padding: 0 80px 80px 80px;
-  margin-top: -60px;   /* Pull cards upward for layered effect */
+  padding: 20px 80px 80px 80px;
+  margin-top: 20px;
+}
+
+/* SEARCH / FILTER CONTROLS */
+.explore-controls {
+  max-width: 1100px;
+  margin: 12px auto 18px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.96);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  z-index: 5;
+}
+
+.search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-row input[type="text"],
+.search-row input[type="search"],
+.search-row input,
+.range-row input,
+.search-row select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #e6e9ef;
+  background: white;
+  font-size: 13px;
+}
+
+.search-row .search-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  background: #0f172a;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.search-row .search-btn:hover { background: #1e3a8a; }
+
+.section-toggle {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.section-toggle button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15,23,42,0.08);
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.section-toggle button.active {
+  background: #0f172a;
+  color: white;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.12);
+}
+
+.search-row input { flex: 0 1 520px; max-width: 520px; min-width: 160px; }
+
+@media (max-width: 720px) {
+  .search-row input { flex: 1 1 auto; max-width: 100%; }
+}
+.search-row select { min-width: 180px; }
+
+.range-row { display: none; }
+
+/* SECTION HEADINGS */
+.featured, .trending, .latest {
+  max-width: 1200px;
+  margin: 28px auto;
+}
+
+.featured-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.trending .card-grid, .latest .card-grid {
+  max-width: 1200px;
+  margin-top: 12px;
+}
+
+.campaign-section section h2 {
+  color: #0f172a;
+  margin-bottom: 12px;
+  font-size: 22px;
+}
+
+.no-campaigns {
+  padding: 28px;
+  text-align: center;
+  color: #0f172a;
+  background: transparent;
 }
 
 /* GRID */
@@ -124,5 +231,5 @@
 }
 
 body {
-  background-color: #0f172a;
+  background: transparent;
 }
