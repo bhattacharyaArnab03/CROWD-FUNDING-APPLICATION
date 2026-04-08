@@ -22,4 +22,21 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
+
+# Backend dependencies
+backend/node_modules
+
+# Environment files
+.env
+backend/.env
+
+# Build outputs
+build
+backend/build
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+
 *.sw?
+package-lock.json
