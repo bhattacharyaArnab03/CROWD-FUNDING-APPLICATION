@@ -8,26 +8,26 @@ const redisClient = createClient({
 });
 
 redisClient.on("error", (err) => {
-  if (isRedisConnected) console.error("[Payment Service][Redis] Connection lost:", err.message);
+  if (isRedisConnected) console.error("[User Service][Redis] Connection lost:", err.message);
   isRedisConnected = false;
 });
 
 redisClient.on("connect", () => {
-  console.log("[Payment Service][Redis] Client connected successfully.");
+  console.log("[User Service][Redis] Client connected successfully.");
   isRedisConnected = true;
 });
 
 redisClient.connect().catch(() => {
-  console.log("[Payment Service][Redis] Not available locally. Defaulting to direct DB queries.");
+  console.log("[User Service][Redis] Not available locally. Defaulting to direct DB queries.");
 });
 
 // Graceful shutdown for Redis
 const shutdown = async () => {
   try {
     await redisClient.quit();
-    console.log("[Payment Service][Redis] Client connection closed.");
+    console.log("[User Service][Redis] Client connection closed.");
   } catch (err) {
-    console.error("[Payment Service][Redis] Error during shutdown:", err);
+    console.error("[User Service][Redis] Error during shutdown:", err);
   }
 };
 

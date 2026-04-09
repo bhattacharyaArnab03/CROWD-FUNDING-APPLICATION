@@ -36,6 +36,7 @@ router.post("/", async (req, res) => {
       campaignId,
     });
     const savedPayment = await payment.save();
+    console.log("[Payment Service] Payment completed:", savedPayment);
     res.status(201).json(savedPayment);
   } 
   catch (err) {

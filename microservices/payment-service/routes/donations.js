@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import axios from "axios";
 import Donation from "../models/Donation.js";
@@ -9,6 +8,7 @@ import { redisClient, isRedisConnected } from "../redis.js";
 const router = Router();
 
 router.get("/", async (req, res) => {
+  const start = Date.now();
   try {
     const { userId, userEmail } = req.query;
     let filter = {};
@@ -17,16 +17,25 @@ router.get("/", async (req, res) => {
     if (userId) {
       filter.userId = userId;
       cacheKey = `donations_user_${userId}`;
-    } else if (userEmail) {
+    } 
+    else if (userEmail) {
       filter.userEmail = userEmail;
       cacheKey = `donations_email_${userEmail}`;
     }
 
     // 1. Check Redis Cache First
     if (isRedisConnected) {
-      const cachedData = await redisClient.get(cacheKey);
-      if (cachedData) {
-        return res.json(JSON.parse(cachedData));
+      try {
+        const cachedData = await redisClient.get(cacheKey);
+        const elapsed = Date.now() - start;
+        if (cachedData) {
+          console.log(`[Redis] Cache HIT for key: ${cacheKey} (${elapsed} ms)`);
+          return res.json(JSON.parse(cachedData));
+        } else {
+          console.log(`[Redis] Cache MISS for key: ${cacheKey} (${elapsed} ms)`);
+        }
+      } catch (err) {
+        console.error(`[Redis] Error reading key ${cacheKey}:`, err);
       }
     }
 
@@ -76,7 +85,8 @@ router.get("/", async (req, res) => {
     // 3. Save to Cache in the BACKGROUND (Non-blocking)
     if (isRedisConnected) {
       redisClient.setEx(cacheKey, 300, JSON.stringify(history))
-        .catch(err => console.error("Redis background save failed:", err));
+        .then(() => console.log(`[Redis] Set cache for key: ${cacheKey}`))
+        .catch(err => console.error(`[Redis] Error setting key ${cacheKey}:`, err));
     }
 
   } catch (err) {
@@ -87,16 +97,21 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const donation = await Donation.findById(req.params.id).lean();
-    if (!donation) return res.status(404).json({ message: "Donation not found." });
+    if (!donation) 
+      return res.status(404).json({ message: "Donation not found." });
     res.json(donation);
-  } catch {
+  } 
+  catch {
     res.status(400).json({ message: "Invalid donation ID." });
   }
 });
 
+
 router.post("/", async (req, res) => {
   const startTime = Date.now();
   console.log("⏱️ [Payment Service] Processing incoming donation...");
+  let lockAcquired = false;
+  let distributedLockKey;
   try {
     const { campaignId, userId, amount, paymentMethod = "razorpay", userEmail, remarks } = req.body;
     const donationAmount = Number(amount);
@@ -124,14 +139,18 @@ router.post("/", async (req, res) => {
     }
 
     // REDIS DISTRIBUTED LOCK (Mutex) with Spinlock Retry Mechanism
-    let lockAcquired = false;
-    let distributedLockKey = `lock:campaign:${campaignId}`;
+    distributedLockKey = `lock:campaign:${campaignId}`;
     if (isRedisConnected) {
       let retries = 5; // Will try 5 times, waiting 500ms each = 2.5 seconds max wait Time
       while (retries > 0 && !lockAcquired) {
-        // Try to acquire lock. NX = Only set if it DOES NOT exist. PX 5000 = Expire in 5 seconds.
-        lockAcquired = await redisClient.set(distributedLockKey, "LOCKED", { NX: true, PX: 5000 });
-        
+        try {
+          lockAcquired = await redisClient.set(distributedLockKey, "LOCKED", { NX: true, PX: 5000 });
+          if (lockAcquired) {
+            console.log(`🔐 [Redis] Lock ACQUIRED for key: ${distributedLockKey}`);
+          }
+        } catch (err) {
+          console.error(`[Redis] Error acquiring lock for key ${distributedLockKey}:`, err);
+        }
         if (!lockAcquired) {
           retries--;
           if (retries > 0) {
@@ -140,7 +159,6 @@ router.post("/", async (req, res) => {
           }
         }
       }
-
       if (!lockAcquired) {
         console.log(`🔒 [Payment Service] Spinlock timed out! Rate limiting user for campaign ${campaignId}`);
         return res.status(429).json({ 
@@ -180,22 +198,39 @@ router.post("/", async (req, res) => {
     // Clear Cache when a new donation is made to ensure fresh data
     if (isRedisConnected) {
       const actualUserEmail = userEmail || user.email;
-      await redisClient.del(`donations_user_${user._id}`);
-      await redisClient.del(`donations_email_${actualUserEmail}`);
-      await redisClient.del("donations_all");
+      try {
+        await redisClient.del(`donations_user_${user._id}`);
+        console.log(`[Redis] Deleted key: donations_user_${user._id}`);
+      } catch (err) {
+        console.error(`[Redis] Error deleting key donations_user_${user._id}:`, err);
+      }
+      try {
+        await redisClient.del(`donations_email_${actualUserEmail}`);
+        console.log(`[Redis] Deleted key: donations_email_${actualUserEmail}`);
+      } catch (err) {
+        console.error(`[Redis] Error deleting key donations_email_${actualUserEmail}:`, err);
+      }
+      try {
+        await redisClient.del("donations_all");
+        console.log(`[Redis] Deleted key: donations_all`);
+      } catch (err) {
+        console.error(`[Redis] Error deleting key donations_all:`, err);
+      }
       console.log("🧹 [Payment Service] Invalidated Redis cache for fresh history.");
     }
 
     // Fire & Forget: Event-driven Messaging (RabbitMQ)
     console.log("➡️ [Payment Service] Attempting to Dispatch Event to Queue...");
-    const isAsyncSent = await publishDonationEvent({
+    const eventPayload = {
       campaignId: campaign._id,
       userId: user._id,
       amount: donationAmount
-    });
+    };
+    const isAsyncSent = await publishDonationEvent(eventPayload);
 
     if (!isAsyncSent) {
-      console.log("⚠️ [Payment Service] Message Broker Offline! Executing SYNCHRONOUS HTTP blocking fallback...");
+      console.log("[Payment Service] [RabbitMQ] Message Broker Offline! Executing SYNCHRONOUS HTTP fallback...");
+      console.log("[Payment Service] [HTTP Fallback] PATCH http://localhost:5002/api/campaigns/" + campaign._id + "/add-funds", { amount: donationAmount });
       // Fallback: Synchronous HTTP if RabbitMQ is offline
       // 1. Atomically update Campaign Raised Amount
       try {
@@ -212,12 +247,6 @@ router.post("/", async (req, res) => {
         console.log("Failed to update user total donated atomically:", e.message);
       }
       console.log("⚠️ [Payment Service] Synchronous processing complete. Proceeding to User response...");
-    }
-
-    // Release the Redis Distributed Lock so the next person can donate
-    if (isRedisConnected && lockAcquired) {
-      await redisClient.del(distributedLockKey);
-      console.log(`🔓 [Payment Service] Lock released for campaign ${campaignId}`);
     }
 
     const endTime = Date.now();
@@ -239,6 +268,16 @@ router.post("/", async (req, res) => {
   } catch (err) {
     console.error("Payment Error:", err);
     res.status(500).json({ error: "An unexpected error occurred while processing your donation." });  
+  } finally {
+    // Always release the Redis Distributed Lock so the next person can donate
+    if (isRedisConnected && lockAcquired && distributedLockKey) {
+      try {
+        await redisClient.del(distributedLockKey);
+        console.log(`🔓 [Redis] Lock RELEASED for key: ${distributedLockKey}`);
+      } catch (err) {
+        console.error(`[Redis] Error releasing lock for key ${distributedLockKey}:`, err);
+      }
+    }
   }
 });
 

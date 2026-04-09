@@ -1,6 +1,8 @@
+
 import { Router } from "express";
 import User from "../models/User.js";
 import axios from "axios";
+import { redisClient, isRedisConnected } from "../redis.js";
 
 const router = Router();
 
@@ -21,12 +23,27 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+
 router.get("/:id/donations", async (req, res) => {
+  const userId = req.params.id;
+  const cacheKey = `user:${userId}:donations`;
+  const start = Date.now();
   try {
-    const response = await axios.get(`http://localhost:5003/api/donations?userId=${req.params.id}`);    
+    // Try cache first
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      const elapsed = Date.now() - start;
+      console.log(`[CACHE HIT] /api/users/${userId}/donations responded in ${elapsed} ms`);
+      return res.json(JSON.parse(cached));
+    }
+
+    // Not in cache, fetch from payment-service
+    const response = await axios.get(`http://localhost:5003/api/donations?userId=${userId}`);
+    await redisClient.setEx(cacheKey, 60, JSON.stringify(response.data)); // Cache for 60s
+    const elapsed = Date.now() - start;
+    console.log(`[CACHE MISS] /api/users/${userId}/donations responded in ${elapsed} ms`);
     res.json(response.data);
-  }
-  catch (err) {
+  } catch (err) {
     res.status(400).json({ message: "Invalid user ID or Payment Service unavailable." });
   }
 });
@@ -57,7 +74,7 @@ router.patch("/:id/totalDonated", async (req, res) => {
   try {
     const amount = Number(req.body.amount);
     if (!amount) return res.status(400).json({ message: "Invalid amount." });
-    
+
     // Atomic increment solves database race conditions for totalDonated
     const user = await User.findByIdAndUpdate(
       req.params.id,
@@ -66,7 +83,11 @@ router.patch("/:id/totalDonated", async (req, res) => {
     );
 
     if (!user) return res.status(404).json({ message: "User not found." });
-    
+
+    // Invalidate donations cache for this user
+    const cacheKey = `user:${req.params.id}:donations`;
+    await redisClient.del(cacheKey);
+
     res.json(user);
   } catch (err) {
     res.status(400).json({ message: "Failed to update total donated." });

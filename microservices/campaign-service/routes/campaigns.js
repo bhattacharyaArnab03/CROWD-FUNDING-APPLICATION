@@ -17,9 +17,10 @@ const invalidateCache = async () => {
   if (isRedisConnected) {
     try {
       await redisClient.del("all_campaigns");
+      console.log("[Redis] Deleted key: all_campaigns");
     } 
     catch (e) {
-      console.error("Cache invalidation failed", e);
+      console.error("[Redis] Error deleting key all_campaigns:", e);
     }
   }
 };
@@ -48,8 +49,14 @@ const fetchAndCacheCampaigns = async () => {
     }
     const mappedCampaigns = campaigns.map(c => c.toObject());
     if (isRedisConnected) {
-      await redisClient.setEx("all_campaigns", 300, JSON.stringify(mappedCampaigns));
-      console.log("🔥 [Campaign Service] Cache beautifully WARMED UP in the background!");
+      try {
+        await redisClient.setEx("all_campaigns", 300, JSON.stringify(mappedCampaigns));
+        console.log("[Redis] Set cache for key: all_campaigns");
+        console.log("[Campaign Service] Cache beautifully WARMED UP in the background!");
+      } 
+      catch (err) {
+        console.error("[Redis] Error setting key all_campaigns:", err);
+      }
     }
     return mappedCampaigns;
   } catch (err) {
@@ -63,17 +70,29 @@ const calculateProgress = (campaign) =>
 
 // Update campaign statuses before returning
 router.get("/", async (req, res) => {
+  const start = Date.now();
   try {
     // 1. Check Redis Cache
     if (isRedisConnected) {
-      const cachedData = await redisClient.get("all_campaigns");
-      if (cachedData) {
-        return res.json(JSON.parse(cachedData));
+      try {
+        const cachedData = await redisClient.get("all_campaigns");
+        if (cachedData) {
+          const elapsed = Date.now() - start;
+          console.log(`[Redis] Cache HIT for key: all_campaigns (${elapsed} ms)`);
+          return res.json(JSON.parse(cachedData));
+        } else {
+          const elapsed = Date.now() - start;
+          console.log(`[Redis] Cache MISS for key: all_campaigns (${elapsed} ms)`);
+        }
+      } catch (err) {
+        console.error("[Redis] Error reading key all_campaigns:", err);
       }
     }
 
     // 2. Cache Miss -> Serve user instantly with a fast DB query
     const campaigns = await Campaign.find().lean();
+    const elapsed = Date.now() - start;
+    console.log(`[CACHE MISS] /api/campaigns responded in ${elapsed} ms`);
     res.json(campaigns);
 
     // 3. Populate cache and update statuses in the BACKGROUND (Non-blocking) so user doesn't wait
@@ -123,6 +142,7 @@ router.post("/", async (req, res) => {
   });
 
   const saved = await newCampaign.save();
+  console.log(`[Campaign Service] Campaign created: ${saved.title} (ID: ${saved._id})`);
   await invalidateCache();
   res.status(201).json(saved);
 });

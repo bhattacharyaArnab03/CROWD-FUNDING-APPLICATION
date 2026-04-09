@@ -1,43 +1,59 @@
+
 import amqp from "amqplib";
 import axios from "axios";
 
 let channel = null;
+let connection = null;
+
+const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost";
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || "http://localhost:5001";
+
+const MAIN_QUEUE = "user_donations_queue";
+const processedIds = new Set();
 
 export const connectRabbitMQListener = async () => {
     try {
-        const connection = await amqp.connect("amqp://localhost");
+        connection = await amqp.connect(RABBITMQ_URL);
         channel = await connection.createChannel();
         await channel.assertExchange("donations_exchange", "topic", { durable: true });
-        
-        // Setup unique queue for user service binding
-        const q = await channel.assertQueue("user_donations_queue", { exclusive: false });
-        await channel.bindQueue(q.queue, "donations_exchange", "donation.created");
-        
-        console.log("? [User Service] Listening for RabbitMQ async donation events...");
-        
-        // Prevent HTTP stampede by processing only 5 messages at a time concurrenty
+        await channel.assertQueue(MAIN_QUEUE, { durable: true });
+        await channel.bindQueue(MAIN_QUEUE, "donations_exchange", "donation.created");
+
+        console.log("[User Service][RabbitMQ] Listening for async donation events...");
+
         channel.prefetch(5);
-        
-        channel.consume(q.queue, async (msg) => {
+
+        channel.consume(MAIN_QUEUE, async (msg) => {
             if (msg !== null) {
-                const eventData = JSON.parse(msg.content.toString());
-                
-                // ARTIFICIAL DELAY: Slow down processing by 1 second so you can visually see the queue fill up in the RabbitMQ Dashboard!
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                console.log(`?? [User Service] Received async event for User ID: ${eventData.userId} with amount: ${eventData.amount}`);
-                
+                let eventData;
                 try {
-                    // Locally route it through the existing atomic add-funds endpoint
-                    await axios.patch(`http://localhost:5001/api/users/${eventData.userId}/totalDonated`, { amount: eventData.amount });
+                    eventData = JSON.parse(msg.content.toString());
+                } catch (e) {
+                    console.error("[User Service][RabbitMQ] Invalid message format, dropping message.");
+                    channel.nack(msg, false, false); // Drop message
+                    return;
+                }
+
+                // Idempotency check
+                const msgId = eventData.transactionNumber || eventData._id;
+                if (msgId && processedIds.has(msgId)) {
+                    console.log(`[User Service][RabbitMQ] Duplicate message detected (id: ${msgId}), acking.`);
+                    channel.ack(msg);
+                    return;
+                }
+
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await axios.patch(`${USER_SERVICE_URL}/api/users/${eventData.userId}/totalDonated`, { amount: eventData.amount });
                     channel.ack(msg); // Acknowledge successful processing
+                    if (msgId) processedIds.add(msgId);
                 } catch (err) {
-                    console.error("Failed to process async user totalDonated event:", err.message);
-                    // Do not ack, so rabbitMQ will retry it later
+                    console.error(`[User Service][RabbitMQ] Processing failed, dropping message:`, err.message);
+                    channel.nack(msg, false, false); // Drop message
                 }
             }
         });
     } catch (error) {
-        console.error("? [User Service] RabbitMQ not found. Will fallback to synchronous HTTP.", error.message);
+        console.error("[User Service][RabbitMQ] Connection error. Will fallback to synchronous HTTP.", error.message);
     }
 };

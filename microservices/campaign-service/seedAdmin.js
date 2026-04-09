@@ -1,7 +1,5 @@
 import { connectDB } from "./config/db.js";
-
 import User from "./models/User.js";
-import { generateTransactionNumber } from "./utils/generateTransactionNumber.js";
 
 const ensureAdmin = async () => {
   await connectDB();
