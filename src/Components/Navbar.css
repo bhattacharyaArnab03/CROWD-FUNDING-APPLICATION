@@ -5,6 +5,12 @@
   padding: 18px 60px;
   background-color: #0f172a;   /* Professional deep navy */
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  z-index: 50;
+  box-sizing: border-box;
 }
 
 /* Logo */

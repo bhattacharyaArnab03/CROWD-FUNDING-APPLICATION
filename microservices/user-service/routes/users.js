@@ -3,6 +3,7 @@ import { Router } from "express";
 import User from "../models/User.js";
 import axios from "axios";
 import { redisClient, isRedisConnected } from "../redis.js";
+import { publishUserRegisteredEvent } from "../rabbitmq.js";
 
 const router = Router();
 
@@ -26,11 +27,16 @@ router.get("/:id", async (req, res) => {
 
 router.get("/:id/donations", async (req, res) => {
   const userId = req.params.id;
-  const cacheKey = `user:${userId}:donations`;
+  const cacheKey = `user:${userId}:donations:v1`;
   const start = Date.now();
   try {
     // Try cache first
-    const cached = await redisClient.get(cacheKey);
+    let cached = null;
+    try {
+      cached = await redisClient.get(cacheKey);
+    } catch (e) {
+      console.warn("[User Service][Redis] Redis unavailable, serving from DB.");
+    }
     if (cached) {
       const elapsed = Date.now() - start;
       console.log(`[CACHE HIT] /api/users/${userId}/donations responded in ${elapsed} ms`);
@@ -38,8 +44,24 @@ router.get("/:id/donations", async (req, res) => {
     }
 
     // Not in cache, fetch from payment-service
-    const response = await axios.get(`http://localhost:5003/api/donations?userId=${userId}`);
-    await redisClient.setEx(cacheKey, 60, JSON.stringify(response.data)); // Cache for 60s
+    let response;
+    try {
+      response = await axios.get(`http://localhost:5003/api/donations?userId=${userId}`);
+    } catch (err) {
+      console.error(`[User Service] Failed to fetch donations from Payment Service for userId=${userId}:`, {
+        url: `http://localhost:5003/api/donations?userId=${userId}`,
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+        stack: err.stack
+      });
+      return res.status(400).json({ message: "Invalid user ID or Payment Service unavailable." });
+    }
+    try {
+      await redisClient.setEx(cacheKey, 600, JSON.stringify(response.data)); // Cache for 10 min
+    } catch (e) {
+      console.warn("[User Service][Redis] Redis unavailable, cannot cache.");
+    }
     const elapsed = Date.now() - start;
     console.log(`[CACHE MISS] /api/users/${userId}/donations responded in ${elapsed} ms`);
     res.json(response.data);
@@ -67,6 +89,12 @@ router.post("/", async (req, res) => {
   });
 
   const saved = await newUser.save();
+  // Publish user registration event
+  try {
+    await publishUserRegisteredEvent(saved);
+  } catch (err) {
+    console.error("[User Service][RabbitMQ] Failed to publish user.registered event:", err.message);
+  }
   res.status(201).json(saved);
 });
 
@@ -85,8 +113,12 @@ router.patch("/:id/totalDonated", async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found." });
 
     // Invalidate donations cache for this user
-    const cacheKey = `user:${req.params.id}:donations`;
-    await redisClient.del(cacheKey);
+    const cacheKey = `user:${req.params.id}:donations:v1`;
+    try {
+      await redisClient.del(cacheKey);
+    } catch (e) {
+      console.warn("[User Service][Redis] Redis unavailable, cannot invalidate cache.");
+    }
 
     res.json(user);
   } catch (err) {

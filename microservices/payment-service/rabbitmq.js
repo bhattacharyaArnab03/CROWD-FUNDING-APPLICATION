@@ -1,8 +1,13 @@
+
 import amqp from "amqplib";
 
 let channel = null;
+let processedDonations = 0;
 let confirmChannel = null;
 let connection = null;
+
+const USER_REGISTERED_QUEUE = "payment_user_registered_queue";
+const DONATION_QUEUE = "donations_queue"; // Moved to top-level scope for global access
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost";
 
@@ -14,11 +19,49 @@ export const connectRabbitMQ = async () => {
         // Confirm channel for reliable publishing
         confirmChannel = await connection.createConfirmChannel();
         await confirmChannel.assertExchange("donations_exchange", "topic", { durable: true });
+        await channel.assertExchange("users_exchange", "topic", { durable: true });
+        // User registration event subscription
+        await channel.assertQueue(USER_REGISTERED_QUEUE, { durable: true });
+        await channel.bindQueue(USER_REGISTERED_QUEUE, "users_exchange", "user.registered");
+        channel.consume(USER_REGISTERED_QUEUE, async (msg) => {
+            if (msg !== null) {
+                try {
+                    const eventData = JSON.parse(msg.content.toString());
+                    // TODO: Implement user payment profile initialization logic here
+                    console.log("[Payment Service][RabbitMQ] Received user.registered event:", eventData);
+                    channel.ack(msg);
+                } catch (e) {
+                    console.error("[Payment Service][RabbitMQ] Invalid user.registered message, dropping.");
+                    channel.nack(msg, false, false);
+                }
+            }
+        });
+
+        // Show queue length and processed count for donations
+        await showDonationQueueStats();
+        setInterval(showDonationQueueStats, 5000); // Update every 5 seconds
+
         console.log("[Payment Service][RabbitMQ] Connected to RabbitMQ successfully");
     } catch (error) {
         console.error("[Payment Service][RabbitMQ] Connection error. Will fallback to synchronous HTTP (Axios)", error.message);
     }
 };
+
+// Donation queue stats function now uses top-level DONATION_QUEUE
+async function showDonationQueueStats() {
+    if (!channel) return;
+    try {
+        // Ensure the queue exists before checking
+        await channel.assertQueue(DONATION_QUEUE, { durable: true });
+        const q = await channel.checkQueue(DONATION_QUEUE);
+        console.log(`[Payment Service][RabbitMQ] [Queue] '${DONATION_QUEUE}': ${q.messageCount} in queue, ${processedDonations} processed.`);
+    } catch (e) {
+        // Only log if queue doesn't exist
+        if (e && e.message && !e.message.includes('NOT_FOUND')) {
+            console.error(`[Payment Service][RabbitMQ] Error checking queue '${DONATION_QUEUE}':`, e.message);
+        }
+    }
+}
 
 
 // Batching logic
@@ -89,6 +132,7 @@ export const publishDonationEvent = async (eventData) => {
         } else {
             scheduleBatchFlush();
         }
+        processedDonations++;
     });
 };
 

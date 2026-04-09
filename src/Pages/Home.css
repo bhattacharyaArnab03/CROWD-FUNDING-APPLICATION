@@ -1,13 +1,19 @@
 .home-container {
   font-family: Arial, sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1e3a8a, #0f172a);
 }
 
 /* HERO SECTION */
 .hero {
-  background: linear-gradient(135deg, #1e3a8a, #0f172a);
+  /* Remove background here to avoid double gradient */
   color: white;
-  padding: 100px 20px;
+  padding: 20px 20px 0 20px; /* Top padding for navbar */
   text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .hero-content {

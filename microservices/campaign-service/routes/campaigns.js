@@ -13,14 +13,17 @@ if (isRedisConnected) {
 }
 
 // Helper for invalidation
-const invalidateCache = async () => {
+const CAMPAIGNS_CACHE_KEY = "all_campaigns:v1";
+// Unified cache refresh helper
+const refreshCampaignCache = async () => {
   if (isRedisConnected) {
     try {
-      await redisClient.del("all_campaigns");
-      console.log("[Redis] Deleted key: all_campaigns");
-    } 
-    catch (e) {
-      console.error("[Redis] Error deleting key all_campaigns:", e);
+      await redisClient.del(CAMPAIGNS_CACHE_KEY);
+      const campaigns = await Campaign.find().lean();
+      await redisClient.setEx(CAMPAIGNS_CACHE_KEY, 300, JSON.stringify(campaigns));
+      console.log("[Redis] Campaign cache refreshed!");
+    } catch (err) {
+      console.error("[Redis] Error refreshing campaign cache:", err);
     }
   }
 };
@@ -50,12 +53,12 @@ const fetchAndCacheCampaigns = async () => {
     const mappedCampaigns = campaigns.map(c => c.toObject());
     if (isRedisConnected) {
       try {
-        await redisClient.setEx("all_campaigns", 300, JSON.stringify(mappedCampaigns));
-        console.log("[Redis] Set cache for key: all_campaigns");
+        await redisClient.setEx(CAMPAIGNS_CACHE_KEY, 300, JSON.stringify(mappedCampaigns));
+        console.log(`[Redis] Set cache for key: ${CAMPAIGNS_CACHE_KEY}`);
         console.log("[Campaign Service] Cache beautifully WARMED UP in the background!");
       } 
       catch (err) {
-        console.error("[Redis] Error setting key all_campaigns:", err);
+        console.error(`[Redis] Error setting key ${CAMPAIGNS_CACHE_KEY}:`, err);
       }
     }
     return mappedCampaigns;
@@ -75,17 +78,17 @@ router.get("/", async (req, res) => {
     // 1. Check Redis Cache
     if (isRedisConnected) {
       try {
-        const cachedData = await redisClient.get("all_campaigns");
+        const cachedData = await redisClient.get(CAMPAIGNS_CACHE_KEY);
         if (cachedData) {
           const elapsed = Date.now() - start;
-          console.log(`[Redis] Cache HIT for key: all_campaigns (${elapsed} ms)`);
+          console.log(`[Redis] Cache HIT for key: ${CAMPAIGNS_CACHE_KEY} (${elapsed} ms)`);
           return res.json(JSON.parse(cachedData));
         } else {
           const elapsed = Date.now() - start;
-          console.log(`[Redis] Cache MISS for key: all_campaigns (${elapsed} ms)`);
+          console.log(`[Redis] Cache MISS for key: ${CAMPAIGNS_CACHE_KEY} (${elapsed} ms)`);
         }
       } catch (err) {
-        console.error("[Redis] Error reading key all_campaigns:", err);
+        console.error(`[Redis] Error reading key ${CAMPAIGNS_CACHE_KEY}:`, err);
       }
     }
 
@@ -118,8 +121,14 @@ router.get("/:id/donations", async (req, res) => {
     // Instead of querying locally, make a request to the Payment Service       
     const response = await axios.get(`http://localhost:5003/api/donations?campaignId=${req.params.id}`);
     res.json(response.data);
-  } 
-  catch (err) {
+  } catch (err) {
+    console.error(`[Campaign Service] Failed to fetch donations from Payment Service for campaignId=${req.params.id}:`, {
+      url: `http://localhost:5003/api/donations?campaignId=${req.params.id}`,
+      status: err.response?.status,
+      data: err.response?.data,
+      message: err.message,
+      stack: err.stack
+    });
     res.status(400).json({ message: "Invalid campaign ID or Payment Service unavailable." });
   }
 });
@@ -129,13 +138,24 @@ router.post("/", async (req, res) => {
   if (!title || !description || !goal || !deadline) {
     return res.status(400).json({ message: "Missing required campaign fields." });
   }
+  const goalNum = Number(goal);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const deadlineDate = new Date(deadline);
+  deadlineDate.setHours(0,0,0,0);
+  if (isNaN(goalNum) || goalNum <= 0) {
+    return res.status(400).json({ message: "Goal amount must be a positive number." });
+  }
+  if (deadlineDate < today) {
+    return res.status(400).json({ message: "Deadline must be today or in the future." });
+  }
 
   const newCampaign = new Campaign({
     title,
     description,
-    goal: Number(goal),
+    goal: goalNum,
     raised: 0,
-    deadline: new Date(deadline),
+    deadline: deadlineDate,
     status: "Active",
     progress: 0,
     image: image || "",
@@ -143,20 +163,46 @@ router.post("/", async (req, res) => {
 
   const saved = await newCampaign.save();
   console.log(`[Campaign Service] Campaign created: ${saved.title} (ID: ${saved._id})`);
-  await invalidateCache();
+  await refreshCampaignCache();
   res.status(201).json(saved);
 });
 
 router.put("/:id", async (req, res) => {
   try {
+    const { title, description, goal, deadline, image } = req.body;
+    if (!title || !description || !goal || !deadline) {
+      return res.status(400).json({ message: "Missing required campaign fields." });
+    }
+    const goalNum = Number(goal);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const deadlineDate = new Date(deadline);
+    deadlineDate.setHours(0,0,0,0);
+    if (isNaN(goalNum) || goalNum <= 0) {
+      return res.status(400).json({ message: "Goal amount must be a positive number." });
+    }
+    if (deadlineDate < today) {
+      return res.status(400).json({ message: "Deadline must be today or in the future." });
+    }
+
     const campaign = await Campaign.findById(req.params.id);
     if (!campaign) 
       return res.status(404).json({ message: "Campaign not found." });
 
-    await updateCampaignFields(campaign, req.body);
-    await campaign.save();
+    // Update fields
+    campaign.title = title;
+    campaign.description = description;
+    campaign.goal = goalNum;
+    campaign.deadline = deadlineDate;
+    if (image !== undefined) campaign.image = image;
 
-    await invalidateCache();
+    // If campaign was completed but new goal is higher than raised, revert to Active
+    if (campaign.status === "Completed" && campaign.raised < goalNum) {
+      campaign.status = "Active";
+    }
+
+    await campaign.save();
+    await refreshCampaignCache();
     res.json(campaign);
   } 
   catch (err) {
@@ -174,8 +220,7 @@ router.post("/:id/cancel", async (req, res) => {
       return res.status(404).json({ message: "Campaign not found." });
     campaign.status = "Cancelled";
     await campaign.save();
-
-    await invalidateCache();
+    await refreshCampaignCache();
     res.json({ message: "Campaign cancelled.", campaign });
   } 
   catch (err) {
@@ -207,10 +252,15 @@ router.patch("/:id/add-funds", async (req, res) => {
     }
 
     await campaign.save();
-    
-    await invalidateCache();
-
-    res.json(campaign);
+    // Atomically overwrite cache with latest data (no TTL)
+    if (isRedisConnected) {
+      const campaigns = await Campaign.find().lean();
+      await redisClient.set(CAMPAIGNS_CACHE_KEY, JSON.stringify(campaigns));
+      console.log("[Redis] Campaign cache atomically updated after donation!");
+    }
+    // Return the latest campaign data
+    const updated = await Campaign.findById(campaign._id).lean();
+    res.json(updated);
   } 
   catch (err) {
     console.error(err);

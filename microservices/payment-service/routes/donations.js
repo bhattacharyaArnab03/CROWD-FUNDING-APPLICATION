@@ -12,30 +12,31 @@ router.get("/", async (req, res) => {
   try {
     const { userId, userEmail } = req.query;
     let filter = {};
-    let cacheKey = "donations_all";
+    let cacheKey = "donations_all:v1";
 
     if (userId) {
       filter.userId = userId;
-      cacheKey = `donations_user_${userId}`;
+      cacheKey = `donations_user_${userId}:v1`;
     } 
     else if (userEmail) {
       filter.userEmail = userEmail;
-      cacheKey = `donations_email_${userEmail}`;
+      cacheKey = `donations_email_${userEmail}:v1`;
     }
 
     // 1. Check Redis Cache First
+    let cachedData = null;
     if (isRedisConnected) {
       try {
-        const cachedData = await redisClient.get(cacheKey);
-        const elapsed = Date.now() - start;
-        if (cachedData) {
-          console.log(`[Redis] Cache HIT for key: ${cacheKey} (${elapsed} ms)`);
-          return res.json(JSON.parse(cachedData));
-        } else {
-          console.log(`[Redis] Cache MISS for key: ${cacheKey} (${elapsed} ms)`);
-        }
+        cachedData = await redisClient.get(cacheKey);
       } catch (err) {
-        console.error(`[Redis] Error reading key ${cacheKey}:`, err);
+        console.warn(`[Payment Service][Redis] Redis unavailable, serving from DB.`);
+      }
+      const elapsed = Date.now() - start;
+      if (cachedData) {
+        console.log(`[Redis] Cache HIT for key: ${cacheKey} (${elapsed} ms)`);
+        return res.json(JSON.parse(cachedData));
+      } else {
+        console.log(`[Redis] Cache MISS for key: ${cacheKey} (${elapsed} ms)`);
       }
     }
 
@@ -84,7 +85,7 @@ router.get("/", async (req, res) => {
 
     // 3. Save to Cache in the BACKGROUND (Non-blocking)
     if (isRedisConnected) {
-      redisClient.setEx(cacheKey, 300, JSON.stringify(history))
+      redisClient.setEx(cacheKey, 600, JSON.stringify(history))
         .then(() => console.log(`[Redis] Set cache for key: ${cacheKey}`))
         .catch(err => console.error(`[Redis] Error setting key ${cacheKey}:`, err));
     }
@@ -124,7 +125,14 @@ router.post("/", async (req, res) => {
     try {
       const campRes = await axios.get(`http://localhost:5002/api/campaigns/${campaignId}`);
       campaign = campRes.data;
-    } catch {
+    } catch (err) {
+      console.error(`[Payment Service] Failed to fetch campaign from Campaign Service for campaignId=${campaignId}:`, {
+        url: `http://localhost:5002/api/campaigns/${campaignId}`,
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+        stack: err.stack
+      });
       return res.status(404).json({ message: "Campaign not found." });
     }
 
@@ -171,7 +179,14 @@ router.post("/", async (req, res) => {
     try {
       const userRes = await axios.get(`http://localhost:5001/api/users/${userId}`);
       user = userRes.data;
-    } catch {
+    } catch (err) {
+      console.error(`[Payment Service] Failed to fetch user from User Service for userId=${userId}:`, {
+        url: `http://localhost:5001/api/users/${userId}`,
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+        stack: err.stack
+      });
       return res.status(404).json({ message: "User not found." });
     }
 
@@ -229,24 +244,38 @@ router.post("/", async (req, res) => {
     const isAsyncSent = await publishDonationEvent(eventPayload);
 
     if (!isAsyncSent) {
-      console.log("[Payment Service] [RabbitMQ] Message Broker Offline! Executing SYNCHRONOUS HTTP fallback...");
-      console.log("[Payment Service] [HTTP Fallback] PATCH http://localhost:5002/api/campaigns/" + campaign._id + "/add-funds", { amount: donationAmount });
+      console.warn("[Payment Service] [RabbitMQ] Message Broker Offline! Executing SYNCHRONOUS HTTP fallback...");
+      console.warn("[Payment Service] [HTTP Fallback] PATCH http://localhost:5002/api/campaigns/" + campaign._id + "/add-funds", { amount: donationAmount });
       // Fallback: Synchronous HTTP if RabbitMQ is offline
       // 1. Atomically update Campaign Raised Amount
       try {
         const resCamp = await axios.patch(`http://localhost:5002/api/campaigns/${campaign._id}/add-funds`, { amount: donationAmount });
         campaign = resCamp.data; // Sync to return updated campaign explicitly    
       } catch (e) {
-        console.log("Failed to update campaign raised amount atomically:", e.message);
+        console.error("[Payment Service] Failed to update campaign raised amount atomically:", {
+          url: `http://localhost:5002/api/campaigns/${campaign._id}/add-funds`,
+          data: { amount: donationAmount },
+          status: e.response?.status,
+          responseData: e.response?.data,
+          message: e.message,
+          stack: e.stack
+        });
       }
 
       // 2. Atomically update User Total Donated
       try {
         await axios.patch(`http://localhost:5001/api/users/${user._id}/totalDonated`, { amount: donationAmount });
       } catch (e) {
-        console.log("Failed to update user total donated atomically:", e.message);
+        console.error("[Payment Service] Failed to update user total donated atomically:", {
+          url: `http://localhost:5001/api/users/${user._id}/totalDonated`,
+          data: { amount: donationAmount },
+          status: e.response?.status,
+          responseData: e.response?.data,
+          message: e.message,
+          stack: e.stack
+        });
       }
-      console.log("⚠️ [Payment Service] Synchronous processing complete. Proceeding to User response...");
+      console.warn("⚠️ [Payment Service] Synchronous processing complete. Proceeding to User response...");
     }
 
     const endTime = Date.now();

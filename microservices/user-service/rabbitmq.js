@@ -5,6 +5,8 @@ import axios from "axios";
 let channel = null;
 let connection = null;
 
+let userExchangeAsserted = false;
+
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost";
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || "http://localhost:5001";
 
@@ -16,6 +18,8 @@ export const connectRabbitMQListener = async () => {
         connection = await amqp.connect(RABBITMQ_URL);
         channel = await connection.createChannel();
         await channel.assertExchange("donations_exchange", "topic", { durable: true });
+        await channel.assertExchange("users_exchange", "topic", { durable: true });
+        userExchangeAsserted = true;
         await channel.assertQueue(MAIN_QUEUE, { durable: true });
         await channel.bindQueue(MAIN_QUEUE, "donations_exchange", "donation.created");
 
@@ -56,4 +60,30 @@ export const connectRabbitMQListener = async () => {
     } catch (error) {
         console.error("[User Service][RabbitMQ] Connection error. Will fallback to synchronous HTTP.", error.message);
     }
+};
+
+// Publishes a user registration event to users_exchange
+export const publishUserRegisteredEvent = async (user) => {
+    if (!channel) {
+        console.error("[User Service][RabbitMQ] Channel not initialized. Cannot publish user registration event.");
+        return;
+    }
+    if (!userExchangeAsserted) {
+        await channel.assertExchange("users_exchange", "topic", { durable: true });
+        userExchangeAsserted = true;
+    }
+    const event = {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        registeredAt: user.createdAt || new Date().toISOString()
+    };
+    channel.publish(
+        "users_exchange",
+        "user.registered",
+        Buffer.from(JSON.stringify(event)),
+        { persistent: true }
+    );
+    console.log("[User Service][RabbitMQ] Published user.registered event:", event);
 };

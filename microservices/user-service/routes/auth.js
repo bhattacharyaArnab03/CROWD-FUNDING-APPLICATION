@@ -7,10 +7,12 @@ router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
+      console.warn(`[Auth] Failed registration attempt: missing fields (name: ${name}, email: ${email}) at ${new Date().toISOString()}`);
       return res.status(400).json({ message: "Name, email and password are required" });
     }
     const existing = await User.findOne({ email });
     if (existing) {
+      console.warn(`[Auth] Failed registration attempt: user already exists (email: ${email}) at ${new Date().toISOString()}`);
       return res.status(400).json({ message: "User already exists" });
     }
 
@@ -29,10 +31,11 @@ router.post("/register", async (req, res) => {
       email: user.email,
       role: user.role,
     };
+    console.log(`[Auth] Successful registration for user: ${user.email} (ID: ${user._id}) at ${new Date().toISOString()}`);
 
     res.status(201).json({ id: user._id, name: user.name, email: user.email, role: user.role });
   } catch (err) {
-    console.error("Registration error:", err);
+    console.error(`[Auth] Registration error for email: ${req.body?.email || "unknown"} at ${new Date().toISOString()}:`, err);
     res.status(500).json({ error: "An unexpected error occurred during registration." });
   }
 });
@@ -44,25 +47,34 @@ router.post("/login", async (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ message: "Missing credentials" });
   }
+  try {
+    const user = await User.findOne({ email, password }).lean();
+    if (!user) {
+      console.warn(`[Auth] Failed login attempt for email: ${email} at ${new Date().toISOString()}`);
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
-  const user = await User.findOne({ email, password }).lean();
-  if (!user) {
-    return res.status(401).json({ message: "Invalid credentials" });
+    // Set user info in session
+    req.session.user = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+    console.log(`[Auth] Session created for user: ${user.email} (ID: ${user._id})`);
+
+    res.json({ id: user._id, name: user.name, email: user.email, role: user.role });
+  } catch (err) {
+    console.error(`[Auth] Login error for email: ${email} at ${new Date().toISOString()}:`, err);
+    res.status(500).json({ error: "An unexpected error occurred during login." });
   }
-
-  // Set user info in session
-  req.session.user = {
-    id: user._id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
-
-  res.json({ id: user._id, name: user.name, email: user.email, role: user.role });
 });
 
 // Logout: destroy session
 router.post("/logout", (req, res) => {
+  if (req.session && req.session.user) {
+    console.log(`[Auth] Session destroyed for user: ${req.session.user.email} (ID: ${req.session.user.id})`);
+  }
   req.session = null;
   res.json({ message: "Logged out successfully" });
 });
@@ -72,6 +84,7 @@ router.get("/me", (req, res) => {
   if (req.session.user) {
     res.json(req.session.user);
   } else {
+    console.warn(`[Auth] Unauthorized access attempt to /me at ${new Date().toISOString()}`);
     res.status(401).json({ message: "Not authenticated" });
   }
 });
@@ -79,19 +92,26 @@ router.get("/me", (req, res) => {
 router.post("/forgot-password", async (req, res) => {
   const { email, newPassword } = req.body;
   if (!email || !newPassword) {
+    console.warn(`[Auth] Password reset failed: missing fields (email: ${email}) at ${new Date().toISOString()}`);
     return res.status(400).json({ message: "Email and newPassword are required" });
   }
-
-  const user = await User.findOneAndUpdate(
-    { email },
-    { password: newPassword },
-    { new: true }
-  );
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
+  console.log(`[Auth] Password reset requested for email: ${email} at ${new Date().toISOString()}`);
+  try {
+    const user = await User.findOneAndUpdate(
+      { email },
+      { password: newPassword },
+      { new: true }
+    );
+    if (!user) {
+      console.warn(`[Auth] Password reset failed: user not found (email: ${email}) at ${new Date().toISOString()}`);
+      return res.status(404).json({ message: "User not found" });
+    }
+    console.log(`[Auth] Password reset successful for email: ${email} at ${new Date().toISOString()}`);
+    res.json({ message: "Password has been reset successfully" });
+  } catch (err) {
+    console.error(`[Auth] Password reset error for email: ${email} at ${new Date().toISOString()}:`, err);
+    res.status(500).json({ error: "An unexpected error occurred during password reset." });
   }
-
-  res.json({ message: "Password has been reset successfully" });
 });
 
 export default router;

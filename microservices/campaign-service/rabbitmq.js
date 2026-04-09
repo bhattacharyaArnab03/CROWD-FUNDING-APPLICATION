@@ -5,6 +5,8 @@ import axios from "axios";
 let channel = null;
 let connection = null;
 
+const USER_REGISTERED_QUEUE = "campaign_user_registered_queue";
+
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost";
 const CAMPAIGN_SERVICE_URL = process.env.CAMPAIGN_SERVICE_URL || "http://localhost:5002";
 
@@ -16,8 +18,26 @@ export const connectRabbitMQListener = async () => {
         connection = await amqp.connect(RABBITMQ_URL);
         channel = await connection.createChannel();
         await channel.assertExchange("donations_exchange", "topic", { durable: true });
+        await channel.assertExchange("users_exchange", "topic", { durable: true });
         await channel.assertQueue(MAIN_QUEUE, { durable: true });
         await channel.bindQueue(MAIN_QUEUE, "donations_exchange", "donation.created");
+
+        // User registration event subscription
+        await channel.assertQueue(USER_REGISTERED_QUEUE, { durable: true });
+        await channel.bindQueue(USER_REGISTERED_QUEUE, "users_exchange", "user.registered");
+        channel.consume(USER_REGISTERED_QUEUE, async (msg) => {
+            if (msg !== null) {
+                try {
+                    const eventData = JSON.parse(msg.content.toString());
+                    // TODO: Implement welcome campaign/notification logic here
+                    console.log("[Campaign Service][RabbitMQ] Received user.registered event:", eventData);
+                    channel.ack(msg);
+                } catch (e) {
+                    console.error("[Campaign Service][RabbitMQ] Invalid user.registered message, dropping.");
+                    channel.nack(msg, false, false);
+                }
+            }
+        });
 
         console.log("[Campaign Service][RabbitMQ] Listening for async donation events...");
 
