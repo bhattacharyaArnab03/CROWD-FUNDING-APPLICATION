@@ -1,4 +1,3 @@
-// Generates TXN-DDMMYY-NUMBER
 export function generateTransactionNumber(prefix = "TXN") {
   const date = new Date();
   const dd = String(date.getDate()).padStart(2, '0');

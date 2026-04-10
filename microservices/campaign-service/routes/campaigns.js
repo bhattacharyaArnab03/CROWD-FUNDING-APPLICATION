@@ -150,21 +150,27 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ message: "Deadline must be today or in the future." });
   }
 
-  const newCampaign = new Campaign({
-    title,
-    description,
-    goal: goalNum,
-    raised: 0,
-    deadline: deadlineDate,
-    status: "Active",
-    progress: 0,
-    image: image || "",
-  });
-
-  const saved = await newCampaign.save();
+  let saved;
+  try {
+    // Critical section: DB write
+    const newCampaign = new Campaign({
+      title,
+      description,
+      goal: goalNum,
+      raised: 0,
+      deadline: deadlineDate,
+      status: "Active",
+      progress: 0,
+      image: image || "",
+    });
+    saved = await newCampaign.save();
+    res.status(201).json(saved);
+  } catch (err) {
+    return res.status(500).json({ error: "An unexpected error occurred while creating campaign." });
+  }
+  // Non-critical: cache refresh, logging
+  refreshCampaignCache().catch(e => console.error("[Campaign] Cache refresh failed after create", e));
   console.log(`[Campaign Service] Campaign created: ${saved.title} (ID: ${saved._id})`);
-  await refreshCampaignCache();
-  res.status(201).json(saved);
 });
 
 router.put("/:id", async (req, res) => {
@@ -185,25 +191,23 @@ router.put("/:id", async (req, res) => {
       return res.status(400).json({ message: "Deadline must be today or in the future." });
     }
 
+    // Critical section: DB update
     const campaign = await Campaign.findById(req.params.id);
     if (!campaign) 
       return res.status(404).json({ message: "Campaign not found." });
-
-    // Update fields
     campaign.title = title;
     campaign.description = description;
     campaign.goal = goalNum;
     campaign.deadline = deadlineDate;
     if (image !== undefined) campaign.image = image;
-
     // If campaign was completed but new goal is higher than raised, revert to Active
     if (campaign.status === "Completed" && campaign.raised < goalNum) {
       campaign.status = "Active";
     }
-
     await campaign.save();
-    await refreshCampaignCache();
     res.json(campaign);
+    // Non-critical: cache refresh
+    refreshCampaignCache().catch(e => console.error("[Campaign] Cache refresh failed after update", e));
   } 
   catch (err) {
     console.error(err);
@@ -215,13 +219,15 @@ router.put("/:id", async (req, res) => {
 // Admin: Cancel a campaign
 router.post("/:id/cancel", async (req, res) => {
   try {
+    // Critical section: DB update
     const campaign = await Campaign.findById(req.params.id);
     if (!campaign) 
       return res.status(404).json({ message: "Campaign not found." });
     campaign.status = "Cancelled";
     await campaign.save();
-    await refreshCampaignCache();
     res.json({ message: "Campaign cancelled.", campaign });
+    // Non-critical: cache refresh
+    refreshCampaignCache().catch(e => console.error("[Campaign] Cache refresh failed after cancel", e));
   } 
   catch (err) {
     res.status(400).json({ message: "Failed to cancel campaign.", error: err.message });
@@ -234,33 +240,29 @@ router.patch("/:id/add-funds", async (req, res) => {
     const amount = Number(req.body.amount);
     if (!amount) 
       return res.status(400).json({ message: "Invalid amount." });   
-
-    // Use $inc for an atomic push directly in the database (solves race conditions)
+    // Critical section: atomic DB update
     const campaign = await Campaign.findByIdAndUpdate(
       req.params.id,
       { $inc: { raised: amount } },
-      { new: true } // Return the updated document
+      { new: true }
     );
-
     if (!campaign) 
       return res.status(404).json({ message: "Campaign not found." });
-
     // Calculate new progress and status natively after update
     campaign.progress = campaign.goal > 0 ? Math.min(100, Math.round((campaign.raised / campaign.goal) * 100)) : 0;
     if (campaign.raised >= campaign.goal && campaign.status !== "Completed") {  
       campaign.status = "Completed";
     }
-
     await campaign.save();
-    // Atomically overwrite cache with latest data (no TTL)
+    res.json(await Campaign.findById(campaign._id).lean());
+    // Non-critical: cache update
     if (isRedisConnected) {
-      const campaigns = await Campaign.find().lean();
-      await redisClient.set(CAMPAIGNS_CACHE_KEY, JSON.stringify(campaigns));
-      console.log("[Redis] Campaign cache atomically updated after donation!");
+      Campaign.find().lean().then(campaigns => {
+        redisClient.set(CAMPAIGNS_CACHE_KEY, JSON.stringify(campaigns)).then(() => {
+          console.log("[Redis] Campaign cache atomically updated after donation!");
+        }).catch(e => console.error("[Redis] Cache update failed after donation", e));
+      });
     }
-    // Return the latest campaign data
-    const updated = await Campaign.findById(campaign._id).lean();
-    res.json(updated);
   } 
   catch (err) {
     console.error(err);

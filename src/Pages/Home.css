@@ -10,7 +10,7 @@ html, body, #root {
   background: transparent;
 }
 
-/* HERO SECTION */
+
 .hero {
   background: linear-gradient(135deg, #1e3a8a, #0f172a);
   color: white;
@@ -103,14 +103,14 @@ html, body, #root {
   color: #cbd5e1;
 }
 
-/* BUTTON CONTAINER */
+
 .hero-buttons {
   display: flex;
   justify-content: center;
   gap: 25px;
 }
 
-/* BUTTON BASE */
+
 .btn {
   padding: 14px 30px;
   border-radius: 8px;
@@ -122,20 +122,20 @@ html, body, #root {
   transition: all 0.3s ease;
 }
 
-/* Hover Effect */
+
 .btn:hover {
   background-color: white;
   color: #0f172a;
 }
 
-/* ACTIVE TOGGLE */
+
 .btn.active {
   background-color: #38bdf8;
   color: #0f172a;
   border-color: #38bdf8;
 }
 
-/* FEATURES (below hero) */
+
 .features {
   background: linear-gradient(-180deg, #dbd9d9, #000103);
   padding: 40px 20px 80px;

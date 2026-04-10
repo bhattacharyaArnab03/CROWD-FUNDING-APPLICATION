@@ -6,21 +6,19 @@ import "./Dashboard.css";
 
 function Dashboard() {
   const { user } = useContext(AuthContext);
-  const [donations, setDonations] = useState([]);
+  const { campaigns, donations, fetchCampaigns, fetchDonationHistory } = useCampaign();
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const { campaigns, fetchCampaigns, getUserDonations } = useCampaign();
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       try {
-        const [donationData] = await Promise.all([
-          getUserDonations({ userId: user?.id || user?._id, userEmail: user?.email }),
+        await Promise.all([
+          fetchDonationHistory(),
           fetchCampaigns(),
         ]);
-        setDonations(donationData);
       } catch (err) {
         // Optionally handle error
       } finally {
@@ -32,7 +30,7 @@ function Dashboard() {
   }, [user]);
 
   // Sort donations by date descending (most recent first)
-  const userDonations = donations
+  const userDonations = (donations || [])
     .filter((d) => (d.userEmail || d.donorEmail) === user?.email)
     .sort((a, b) => {
       const dateA = new Date(a.donatedAt || a.date);

@@ -1,11 +1,13 @@
 
+
 import { useEffect, useState } from "react";
 import { useCampaign } from "../context/CampaignContext";
 import "./Admin.css";
 import CampaignCard from "../Components/CampaignCard";
 
-function Admin() {
-  const { campaigns, fetchCampaigns, createCampaign, updateCampaign, getDonationHistory } = useCampaign();
+
+const Admin = () => {
+  const { campaigns, fetchCampaigns, createCampaign, updateCampaign, donationHistory, fetchDonationHistory } = useCampaign();
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
   const [description, setDescription] = useState("");
@@ -21,7 +23,6 @@ function Admin() {
   const [editRaised, setEditRaised] = useState("");
 
   const [editError, setEditError] = useState("");
-  const [donationHistory, setDonationHistory] = useState([]);
   const [historyError, setHistoryError] = useState("");
   const [activeTab, setActiveTab] = useState("create");
 
@@ -93,8 +94,7 @@ function Admin() {
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const data = await getDonationHistory();
-        setDonationHistory(data);
+        await fetchDonationHistory();
       } catch {
         setHistoryError("Unable to load donation history.");
       }

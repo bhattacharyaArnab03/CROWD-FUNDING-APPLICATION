@@ -1,4 +1,4 @@
-/* PAGE STRUCTURE (Same as Explore) */
+
 .dashboard-page {
   min-height: 100vh;
   background:
@@ -8,7 +8,7 @@
   background-attachment: fixed;
 }
 
-/* HERO */
+
 .dashboard-hero {
   padding: 80px 20px 100px 20px;
   text-align: center;
@@ -32,13 +32,13 @@
   color: #64748b;
 }
 
-/* MAIN SECTION (Layered like Explore) */
+
 .dashboard-section {
   padding: 0 80px 80px 80px;
   margin-top: -60px;
 }
 
-/* STATS GRID */
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -46,7 +46,7 @@
   margin-bottom: 50px;
 }
 
-/* STAT CARD (Same Elevation Style as Campaign Card) */
+
 .stat-card {
   background: white;
   border-radius: 16px;
@@ -65,7 +65,7 @@
   margin-bottom: 8px;
 }
 
-/* HISTORY SECTION */
+
 .history-section h2 {
   font-size: 22px;
   font-weight: 700;

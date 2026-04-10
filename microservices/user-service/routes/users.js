@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import User from "../models/User.js";
 import axios from "axios";
@@ -24,49 +23,40 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-
 router.get("/:id/donations", async (req, res) => {
   const userId = req.params.id;
   const cacheKey = `user:${userId}:donations:v1`;
   const start = Date.now();
+  let donations = null;
+  let cacheHit = false;
   try {
-    // Try cache first
-    let cached = null;
+    // Try cache first (non-critical)
     try {
-      cached = await redisClient.get(cacheKey);
+      const cached = await redisClient.get(cacheKey);
+      if (cached) {
+        cacheHit = true;
+        donations = JSON.parse(cached);
+        const elapsed = Date.now() - start;
+        console.log(`[CACHE HIT] /api/users/${userId}/donations responded in ${elapsed} ms`);
+        return res.json(donations);
+      }
     } catch (e) {
       console.warn("[User Service][Redis] Redis unavailable, serving from DB.");
     }
-    if (cached) {
-      const elapsed = Date.now() - start;
-      console.log(`[CACHE HIT] /api/users/${userId}/donations responded in ${elapsed} ms`);
-      return res.json(JSON.parse(cached));
-    }
-
-    // Not in cache, fetch from payment-service
+    // Not in cache, fetch from payment-service (critical)
     let response;
     try {
       response = await axios.get(`http://localhost:5003/api/donations?userId=${userId}`);
+      donations = response.data;
     } catch (err) {
-      console.error(`[User Service] Failed to fetch donations from Payment Service for userId=${userId}:`, {
-        url: `http://localhost:5003/api/donations?userId=${userId}`,
-        status: err.response?.status,
-        data: err.response?.data,
-        message: err.message,
-        stack: err.stack
-      });
+      console.error(`[User Service] Failed to fetch donations from Payment Service for userId=${userId}: url=http://localhost:5003/api/donations?userId=${userId}, status=${err.response?.status}, data=${JSON.stringify(err.response?.data)}, message=${err.message}, stack=${err.stack}`);
       return res.status(400).json({ message: "Invalid user ID or Payment Service unavailable." });
     }
-    try {
-      await redisClient.setEx(cacheKey, 600, JSON.stringify(response.data)); // Cache for 10 min
-    } catch (e) {
-      console.warn("[User Service][Redis] Redis unavailable, cannot cache.");
-    }
-    const elapsed = Date.now() - start;
-    console.log(`[CACHE MISS] /api/users/${userId}/donations responded in ${elapsed} ms`);
-    res.json(response.data);
+    res.json(donations);
+    // Non-critical: cache update
+    redisClient.setEx(cacheKey, 600, JSON.stringify(donations)).catch(e => console.warn("[User Service][Redis] Failed to cache donations", e));
   } catch (err) {
-    res.status(400).json({ message: "Invalid user ID or Payment Service unavailable." });
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
