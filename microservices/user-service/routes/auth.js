@@ -1,5 +1,7 @@
+
 import { Router } from "express";
 import User from "../models/User.js";
+import { publishUserRegisteredEvent } from "../rabbitmq.js";
 
 const router = Router();
 
@@ -22,6 +24,10 @@ router.post("/register", async (req, res) => {
       password,
       role: "user",
       totalDonated: 0
+    });
+    // Publish user.registered event (non-blocking)
+    publishUserRegisteredEvent(user).catch((err) => {
+      console.error("[Auth] Failed to publish user.registered event:", err);
     });
     // Non-critical: session and logging
     req.session.user = {

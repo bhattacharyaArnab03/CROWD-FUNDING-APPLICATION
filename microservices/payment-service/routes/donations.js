@@ -98,7 +98,7 @@ router.get("/:id", async (req, res) => {
 
 router.post("/", async (req, res) => {
   const startTime = Date.now();
-  console.log("⏱️ [Payment Service] Processing incoming donation...");
+  console.log("[Payment Service] Processing incoming donation...");
   let lockAcquired = false;
   let distributedLockKey;
   let savedDonation = null;
@@ -110,7 +110,7 @@ router.post("/", async (req, res) => {
     const donationAmount = Number(amount);
 
     if (!campaignId || !userId || !donationAmount || donationAmount <= 0) {     
-      return res.status(400).json({ message: "Invalid donation payload." });    
+      return res.status(400).json({ message: "Invalid donation request. Please check your campaign, user, and amount fields." });
     }
 
     // Fetch campaign and user, and generate transaction number BEFORE acquiring lock
@@ -162,7 +162,7 @@ router.post("/", async (req, res) => {
         if (!lockAcquired) {
           retries--;
           if (retries > 0) {
-            console.log(`⏳ [Payment Service] Campaign ${campaignId} is locked. Waiting 500ms... (${retries} attempts left)`);
+            console.log(`[Payment Service] Campaign ${campaignId} is locked. Waiting 500ms... (${retries} attempts left)`);
             await new Promise(resolve => setTimeout(resolve, 500));
           }
         }
@@ -170,7 +170,7 @@ router.post("/", async (req, res) => {
       if (!lockAcquired) {
         console.log(`[Payment Service] Spinlock timed out! Rate limiting user for campaign ${campaignId}`);
         return res.status(429).json({ 
-          message: "High traffic detected! Another donation is currently processing for this campaign. Please try again in a few seconds." 
+          message: "High traffic detected! Another donation is currently processing for this campaign. No funds were deducted. Please try again in a few seconds." 
         });
       }
     }
@@ -179,11 +179,11 @@ router.post("/", async (req, res) => {
     try {
       const remainingAmount = campaign.goal - campaign.raised;
       if (remainingAmount <= 0) {
-        return res.status(400).json({ message: "This campaign is already fully funded." });
+        return res.status(400).json({ message: "This campaign is already fully funded. No funds were deducted." });
       }
       if (donationAmount > remainingAmount) {
         return res.status(400).json({
-          message: `Donation exceeds remaining goal amount. You can donate up to ₹${remainingAmount}.`,
+          message: `Donation exceeds remaining goal amount. You can donate up to ₹${remainingAmount}. Please adjust your donation amount. No funds were deducted.`,
         });
       }
       const donation = new Donation({
@@ -236,7 +236,7 @@ router.post("/", async (req, res) => {
     }
 
     // Fire & Forget: Event-driven Messaging (RabbitMQ)
-    console.log("➡️ [Payment Service] Attempting to Dispatch Event to Queue...");
+    console.log("[Payment Service] Attempting to Dispatch Event to Queue...");
     const eventPayload = {
       campaignId: campaign._id,
       userId: user._id,

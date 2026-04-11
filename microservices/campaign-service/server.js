@@ -3,7 +3,9 @@ import cors from "cors";
 import cookieSession from "cookie-session";
 import { connectDB } from "./config/db.js";
 import { connectRabbitMQListener } from "./rabbitmq.js";
+
 import campaignsRouter from "./routes/campaigns.js";
+import userStatusRouter from "./routes/userStatus.js";
 
 if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
   console.error("FATAL: SESSION_SECRET is missing in production.");
@@ -27,6 +29,7 @@ app.use(cookieSession({
 }));
 
 app.use("/api/campaigns", campaignsRouter);
+app.use("/api/user-status", userStatusRouter);
 
 const start = async () => {
   await connectDB();

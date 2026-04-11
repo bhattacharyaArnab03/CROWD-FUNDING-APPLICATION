@@ -7,7 +7,9 @@ import CampaignCard from "../Components/CampaignCard";
 
 
 const Admin = () => {
-  const { campaigns, fetchCampaigns, createCampaign, updateCampaign, donationHistory, fetchDonationHistory } = useCampaign();
+  const { campaigns, fetchCampaigns, createCampaign, updateCampaign, donations, fetchDonationHistory } = useCampaign();
+  // Defensive: ensure donations is always an array
+  const safeDonationHistory = Array.isArray(donations) ? donations : [];
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
   const [description, setDescription] = useState("");
@@ -143,7 +145,7 @@ const Admin = () => {
 
       {/* HERO */}
       <div className="admin-hero">
-        <h1>Admin Dashboard</h1>
+        <h1 style={{ marginTop: '5rem' }}>Admin Dashboard</h1>
         <p>Create and manage fundraising campaigns</p>
       </div>
 
@@ -290,7 +292,7 @@ const Admin = () => {
           <div className="history-section">
             <h2>Donation History</h2>
             {historyError && <p className="admin-error">{historyError}</p>}
-            {donationHistory.length === 0 ? (
+            {safeDonationHistory.length === 0 ? (
               <p>No donations have been recorded yet.</p>
             ) : (
               <>
@@ -307,7 +309,7 @@ const Admin = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {[...donationHistory]
+                      {[...safeDonationHistory]
                         .sort((a, b) => new Date(b.donatedAt) - new Date(a.donatedAt))
                         .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                         .map((donation) => (
@@ -317,14 +319,14 @@ const Admin = () => {
                             <td>{donation.donorName}</td>
                             <td>₹{donation.amount}</td>
                             <td>{donation.campaignName}</td>
-                            <td>{new Date(donation.donatedAt).toLocaleString()}</td>
+                            <td>{donation.donatedAt ? new Date(donation.donatedAt).toLocaleString() : "-"}</td>
                           </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
                 {/* Pagination Controls */}
-                {Math.ceil(donationHistory.length / itemsPerPage) > 1 && (
+                {Math.ceil(safeDonationHistory.length / itemsPerPage) > 1 && (
                   <div className="pagination">
                     <button 
                       disabled={currentPage === 1} 
@@ -332,10 +334,10 @@ const Admin = () => {
                     >
                       Previous
                     </button>
-                    <span>Page {currentPage} of {Math.ceil(donationHistory.length / itemsPerPage)}</span>
+                    <span>Page {currentPage} of {Math.ceil(safeDonationHistory.length / itemsPerPage)}</span>
                     <button 
-                      disabled={currentPage === Math.ceil(donationHistory.length / itemsPerPage)} 
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(donationHistory.length / itemsPerPage)))}
+                      disabled={currentPage === Math.ceil(safeDonationHistory.length / itemsPerPage)} 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(safeDonationHistory.length / itemsPerPage)))}
                     >
                       Next
                     </button>

@@ -1,8 +1,17 @@
-# PAMCA608 System Design Documentation
+# PAMCA608 - System Design Documentation
+
+**Course:** PAMCA608 - System Design  
+**Term:** Winter 2025-26  
+**Application:** Crowdfunding Application with Transaction Safety
+**Stack:** MERN Stack with Microservices Architecture
 
 ## Project Title
 
 Crowdfunding Application Using MERN Stack and Microservices Architecture
+
+## Problem Statement
+
+Using a MERN stack application, this project analyzes system requirements, identifies major services and their responsibilities, and implements the business logic using a microservices architecture. The design addresses inter-service communication, concurrency control and consistency handling, caching mechanisms, event-driven messaging, and asynchronous processing.
 
 ## Abstract
 
@@ -15,7 +24,7 @@ Key design highlights of the system include:
 - API Gateway based request routing
 - REST-based service-to-service communication
 - Redis-based caching and distributed locking
-- RabbitMQ-based event-driven messaging
+- RabbitMQ-based event-driven messaging with asynchronous consumers
 - Atomic database updates for consistency
 - Local-machine deployment suitable for academic demonstration and testing
 
@@ -30,7 +39,7 @@ Crowdfunding platforms allow individuals, startups, and communities to raise fun
 The need for this system arises from the requirement to:
 
 - provide a simple interface for creating and exploring fundraising campaigns
-- support secure user login and session handling
+- support session-based user login and logout
 - track donations and campaign funding progress accurately
 - handle multiple backend responsibilities in a modular and scalable way
 - demonstrate microservices concepts in a MERN-based academic project
@@ -40,10 +49,10 @@ The need for this system arises from the requirement to:
 This application supports:
 
 - user registration and authentication
-- role-based access for normal users and administrators
+- frontend route protection for normal users and administrators
 - campaign browsing and search
 - campaign creation and updates by administrators
-- donation creation and payment record creation
+- donation creation and a separate payment record API
 - donation history tracking
 - local deployment on a single machine using multiple backend services
 
@@ -87,7 +96,7 @@ The functional requirements supported by the current codebase are:
 - browse campaigns through featured, latest, trending, and all views
 - search campaigns by title or description
 - create donation entries for a campaign
-- create payment records after donation creation
+- provide a payment record API after donation creation
 - fetch donation history globally or by user
 - show user dashboard with total donations and donation history
 - show admin dashboard with campaign management and transaction history
@@ -109,7 +118,7 @@ The major non-functional requirements addressed in this implementation are:
 - Fault Tolerance:
   The system continues to function even when Redis or RabbitMQ are unavailable, although with reduced optimization.
 - Security:
-  Cookie-based sessions and basic role checks are implemented.
+  Cookie-based sessions and frontend route checks are implemented for local demonstration. Password hashing, HTTPS, and backend authorization middleware are listed as production improvements.
 
 ### 2.3 Assumptions and Constraints
 
@@ -148,7 +157,7 @@ Deployment mode:
 - local deployment only
 - all components run on a single machine using different ports
 
-### Architecture Diagram
+### 3.2 Architecture Diagram
 
 ```plantuml
 @startuml
@@ -158,46 +167,49 @@ actor User
 actor Admin
 
 node "Local Machine" {
-  component "React Frontend\nVite :5173" as Frontend
-  component "API Gateway\nExpress :5000" as Gateway
-  component "User Service\nExpress :5001" as UserService
-  component "Campaign Service\nExpress :5002" as CampaignService
-  component "Payment Service\nExpress :5003" as PaymentService
-  database "MongoDB" as Mongo
+  component "React Frontend\n(Vite :5173)" as FE
+  component "API Gateway\n(Express :5000)" as GW
+  component "User Service\n(Express :5001)" as US
+  component "Campaign Service\n(Express :5002)" as CS
+  component "Payment Service\n(Express :5003)" as PS
+  database "MongoDB" as MDB
+  collections "Redis" as RD
   queue "RabbitMQ" as MQ
-  collections "Redis" as Redis
 }
 
-User --> Frontend
-Admin --> Frontend
+User --> FE
+Admin --> FE
+FE --> GW : REST/HTTP
+GW --> US : /api/auth, /api/users
+GW --> CS : /api/campaigns
+GW --> PS : /api/donations, /api/payments
+GW --> CS : /api/user-status/is-new/:userId
 
-Frontend --> Gateway : REST/HTTP
-Gateway --> UserService : /api/auth, /api/users
-Gateway --> CampaignService : /api/campaigns
-Gateway --> PaymentService : /api/donations, /api/payments
+US <--> MDB
+CS <--> MDB
+PS <--> MDB
+US <--> RD
+CS <--> RD
+PS <--> RD
 
-UserService --> Mongo
-CampaignService --> Mongo
-PaymentService --> Mongo
+PS --> MQ : publish donation.created
+MQ --> CS : campaign_donations_queue\nconsume donation.created
+MQ --> US : user_donations_queue\nconsume donation.created
 
-UserService --> Redis
-CampaignService --> Redis
-PaymentService --> Redis
-
-PaymentService --> MQ : publish donation.created
-MQ --> CampaignService : consume donation.created
-MQ --> UserService : consume donation.created
+note right of MQ
+Payment Service = Publisher\nCampaign/User Service = Consumer
+end note
 
 @enduml
 ```
 
-### 3.2 Technology Stack
+### 3.3 Technology Stack
 
 - Frontend: React, Vite, React Router, Axios
 - Backend: Node.js, Express
 - Database: MongoDB with Mongoose
 - API Gateway: Express with `http-proxy-middleware`
-- Message Broker: RabbitMQ with `amqplib`
+- Message Broker: RabbitMQ with `amqplib`, topic exchanges, durable queues, and confirmed publishing
 - Cache and Locking: Redis
 - Session Handling: `cookie-session`
 
@@ -219,6 +231,7 @@ Routes handled:
 - `/api/campaigns` -> campaign service
 - `/api/donations` -> payment service
 - `/api/payments` -> payment service
+- `/api/user-status/is-new/:userId` -> campaign service
 
 ### 4.2 User Service
 
@@ -242,7 +255,7 @@ Responsibilities:
 - retrieve campaign lists and campaign details
 - update raised amount when donations are processed
 - calculate and maintain campaign status and progress
-- fetch campaign donation history from payment service
+- provide a campaign donation-history route that delegates to the payment service
 - cache campaign lists in Redis
 
 ### 4.4 Payment Service
@@ -252,7 +265,7 @@ Responsibilities:
 - create donation entries
 - validate donation amount against campaign state
 - generate transaction numbers and transaction identifiers
-- create payment records
+- expose APIs for creating payment records
 - lock campaign donation processing using Redis
 - publish donation events to RabbitMQ
 - fall back to synchronous HTTP updates if messaging is unavailable
@@ -271,8 +284,10 @@ Examples from the codebase:
 - Payment Service calls Campaign Service to fetch campaign details before donation creation
 - Payment Service calls User Service to fetch donor details before donation creation
 - User Service calls Payment Service to fetch donation history for a specific user
-- Campaign Service calls Payment Service to fetch donations for a specific campaign
+- Campaign Service has a route that delegates campaign donation-history lookup to Payment Service
 - API Gateway forwards frontend requests to the correct service
+
+Internal REST calls currently use fixed localhost URLs, which is suitable for the current local deployment model.
 
 ### 5.2 API Gateway Usage
 
@@ -282,7 +297,7 @@ The API Gateway centralizes browser communication and hides internal service por
 
 ```plantuml
 @startuml
-title Donation Request Flow Through Gateway
+title Donation Request Flow (Gateway to Microservices)
 
 actor User
 participant "React Frontend" as FE
@@ -290,18 +305,44 @@ participant "API Gateway" as GW
 participant "Payment Service" as PS
 participant "Campaign Service" as CS
 participant "User Service" as US
-database "MongoDB" as DB
+collections "Redis" as RD
+database "MongoDB" as MDB
+queue "RabbitMQ" as MQ
 
 User -> FE : Submit donation
 FE -> GW : POST /api/donations
-GW -> PS : Forward request
-PS -> CS : GET /api/campaigns/{id}
+GW -> PS : Proxy to Payment Service
+PS -> CS : GET /api/campaigns/{campaignId}
 CS --> PS : Campaign details
-PS -> US : GET /api/users/{id}
+PS -> US : GET /api/users/{userId}
 US --> PS : User details
-PS -> DB : Save donation
-PS --> GW : Donation response
-GW --> FE : HTTP 201 response
+PS -> PS : Generate transaction number
+
+alt Redis connected
+  PS -> RD : SET lock:campaign:{campaignId} NX PX 5000
+end
+
+alt Lock acquired or Redis unavailable
+  PS -> PS : Validate remaining campaign amount
+  PS -> MDB : Save Donation
+  alt Redis connected
+    PS -> RD : DEL lock and donation cache
+  end
+  PS -> MQ : Publish donation.created
+  alt RabbitMQ publish succeeds
+    PS --> GW : 201 Created (Donation)
+  else RabbitMQ unavailable
+    PS -> CS : PATCH /api/campaigns/{campaignId}/add-funds
+    CS --> PS : Updated campaign
+    PS -> US : PATCH /api/users/{userId}/totalDonated
+    US --> PS : Updated user
+    PS --> GW : 201 Created (Donation)
+  end
+else Lock timeout
+  PS --> GW : 429 High traffic
+end
+
+GW --> FE : Forward response
 
 @enduml
 ```
@@ -329,7 +370,18 @@ The application uses MongoDB atomic increment operations in:
 
 These operations use `$inc`, which prevents read-modify-write race conditions when updating totals.
 
-### 6.3 Consistency Model
+### 6.3 Atomic Update Endpoints
+
+Important consistency endpoints:
+
+- `PATCH /api/campaigns/:id/add-funds`
+  Increments the campaign's raised amount and recalculates progress/status.
+- `PATCH /api/users/:id/totalDonated`
+  Increments the user's cumulative donated amount.
+- `POST /api/donations`
+  Validates campaign and user existence, checks the remaining campaign amount, saves the donation, invalidates caches, and publishes the donation event.
+
+### 6.4 Consistency Model
 
 The system uses a practical hybrid consistency approach:
 
@@ -339,7 +391,7 @@ The system uses a practical hybrid consistency approach:
 
 This means the system prioritizes availability for local execution while still aiming for correct totals and progress.
 
-### 6.4 PlantUML Sequence for Concurrency Handling
+### 6.5 PlantUML Sequence for Concurrency Handling
 
 ```plantuml
 @startuml
@@ -347,22 +399,50 @@ title Donation Concurrency Control
 
 actor Donor
 participant "Payment Service" as PS
-collections "Redis Lock" as RL
-database "MongoDB" as DB
 participant "Campaign Service" as CS
 participant "User Service" as US
+collections "Redis" as RD
+database "MongoDB" as MDB
+queue "RabbitMQ" as MQ
 
 Donor -> PS : POST /api/donations
-PS -> RL : SET NX PX lock:campaign:id
+PS -> CS : Fetch campaign snapshot
+CS --> PS : goal, raised, status
+PS -> US : Fetch donor details
+US --> PS : user data
 
-alt Lock acquired
-  PS -> DB : Save donation
-  PS -> RL : DEL lock
-  PS -> CS : update campaign amount\n(async or fallback sync)
-  PS -> US : update totalDonated\n(async or fallback sync)
-  PS --> Donor : Success response
+alt Redis connected
+  PS -> RD : SET lock:campaign:{campaignId} NX PX 5000
+end
+
+alt Lock acquired or Redis unavailable
+  PS -> PS : Check remaining amount
+  alt Amount is valid
+    PS -> MDB : Save donation
+    alt Redis connected
+      PS -> RD : DEL lock:campaign:{campaignId}
+      PS -> RD : Invalidate donation caches
+    end
+    PS -> MQ : Publish donation.created
+    alt Event published
+      PS --> Donor : 201 Created
+    else Broker unavailable
+      PS -> CS : PATCH /api/campaigns/{id}/add-funds
+      CS -> MDB : Atomic increment raised
+      CS --> PS : Updated campaign
+      PS -> US : PATCH /api/users/{id}/totalDonated
+      US -> MDB : Atomic increment totalDonated
+      US --> PS : Updated user
+      PS --> Donor : 201 Created
+    end
+  else Amount exceeds remaining goal
+    alt Redis connected
+      PS -> RD : DEL lock:campaign:{campaignId}
+    end
+    PS --> Donor : 400 Invalid donation amount
+  end
 else Lock not acquired
-  PS --> Donor : 429 high traffic response
+  PS --> Donor : 429 High traffic
 end
 
 @enduml
@@ -413,29 +493,46 @@ Even in a local single-machine setup, caching demonstrates reduced read latency 
 
 ## 8. Event-Driven Messaging and Asynchronous Processing
 
-RabbitMQ is used to decouple services after a donation is created.
 
-### 8.1 Event Publisher
+RabbitMQ is used to decouple services after a donation is created, enabling asynchronous event-driven updates across microservices.
 
-The Payment Service publishes donation-related events after a donation is saved.
+### 8.1 Event Publisher (Producer)
 
-Primary event:
+**Payment Service (Publisher):**
+- Publishes donation-related events after a donation is saved.
+- Main event: `donation.created` (sent to the `donations_exchange` topic exchange with the `donation.created` routing key).
+- Uses a confirm channel and batching for reliability.
 
-- `donation.created`
+#### Publisher Responsibilities:
+- After a donation is created and stored, the Payment Service emits a `donation.created` event.
+- If RabbitMQ is unavailable, it falls back to direct HTTP PATCH calls to update other services synchronously.
 
 ### 8.2 Event Consumers
 
-Consumers include:
+**Campaign Service (Consumer):**
+- Subscribes to the `campaign_donations_queue`.
+- On receiving a `donation.created` event, it updates the campaign's raised amount and progress in MongoDB.
+- Refreshes campaign cache in Redis.
 
-- Campaign Service, which updates the campaign raised total and progress
-- User Service, which updates the user's cumulative donated amount
+**User Service (Consumer):**
+- Subscribes to the `user_donations_queue`.
+- On receiving a `donation.created` event, it updates the user's cumulative donated amount in MongoDB.
+- Invalidates user donation cache in Redis.
+
+#### Consumer Responsibilities:
+- Listen for relevant events from RabbitMQ queues.
+- Update local state (database and cache) based on event payloads.
+- Acknowledge message processing to RabbitMQ.
+
+**Other Event Paths:**
+- The system also defines a `users_exchange` and `user.registered` event path (currently a placeholder for future features like profile initialization or notifications).
 
 ### 8.3 Benefits of Asynchronous Messaging
 
-- reduces tight coupling between services
-- supports eventual consistency
-- keeps the Payment Service focused on transaction creation
-- makes the system easier to extend with more consumers later
+- Reduces tight coupling between services (services do not need to know each other's endpoints for updates).
+- Supports eventual consistency across distributed services.
+- Keeps the Payment Service focused on transaction creation.
+- Makes the system easier to extend with more consumers later (e.g., analytics, notifications).
 
 ### 8.4 Fallback Behavior
 
@@ -450,18 +547,30 @@ This design improves availability in local deployment and ensures the main workf
 
 ```plantuml
 @startuml
-title Asynchronous Donation Event Processing
+title Asynchronous Donation Event Processing (Publisher & Consumers)
 
-participant "Payment Service" as PS
-queue "RabbitMQ" as MQ
-participant "Campaign Service" as CS
-participant "User Service" as US
+participant "Payment Service (Publisher)" as PS
+queue "RabbitMQ\ndonations_exchange" as MQ
+queue "campaign_donations_queue" as CQ
+queue "user_donations_queue" as UQ
+participant "Campaign Service (Consumer)" as CS
+participant "User Service (Consumer)" as US
+database "MongoDB" as MDB
+collections "Redis" as RD
 
-PS -> MQ : publish donation.created
-MQ -> CS : deliver event
-MQ -> US : deliver event
-CS -> CS : update raised amount,\nprogress, status
-US -> US : increment totalDonated
+PS -> MQ : Publish donation.created
+MQ -> CQ : Route donation.created
+MQ -> UQ : Route donation.created
+
+CQ -> CS : Consume donation.created
+CS -> MDB : PATCH /api/campaigns/{id}/add-funds
+CS -> RD : Refresh all_campaigns:v1
+CS --> CQ : ack
+
+UQ -> US : Consume donation.created
+US -> MDB : PATCH /api/users/{id}/totalDonated
+US -> RD : Delete user donation cache
+US --> UQ : ack
 
 @enduml
 ```
@@ -547,6 +656,8 @@ entity User {
   password : String
   role : String
   totalDonated : Number
+  resetToken : String
+  resetTokenExpiry : Date
   createdAt : Date
 }
 
@@ -569,6 +680,7 @@ entity Donation {
   --
   transactionNumber : String
   amount : Number
+  remarks : String
   paymentMethod : String
   campaignId : ObjectId
   userId : ObjectId
@@ -584,6 +696,7 @@ entity Payment {
   transactionNumber : String
   amount : Number
   paymentMethod : String
+  gatewayResponse : String
   donationId : ObjectId
   userId : ObjectId
   campaignId : ObjectId
@@ -593,7 +706,7 @@ entity Payment {
 
 User ||--o{ Donation : makes
 Campaign ||--o{ Donation : receives
-Donation ||--|| Payment : generates
+Donation ||--o| Payment : may_create
 User ||--o{ Payment : owns
 Campaign ||--o{ Payment : related_to
 
@@ -601,6 +714,8 @@ Campaign ||--o{ Payment : related_to
 ```
 
 ## 10. API Design
+
+All browser-facing API calls are made through the API Gateway on `http://localhost:5000`.
 
 ### 10.1 Authentication APIs
 
@@ -628,6 +743,8 @@ Campaign ||--o{ Payment : related_to
 - `POST /api/campaigns/:id/cancel`
 - `PATCH /api/campaigns/:id/add-funds`
 
+Note: `GET /api/campaigns/:id/donations` delegates to the Payment Service. The current Payment Service donation listing supports global, `userId`, and `userEmail` filters; campaign-specific filtering is a recommended improvement.
+
 ### 10.4 Payment and Donation APIs
 
 - `GET /api/donations`
@@ -644,6 +761,8 @@ Campaign ||--o{ Payment : related_to
 - localhost-based service communication
 - response codes for success and error cases
 - browser requests routed through the gateway
+- synchronous REST for validation and fallback updates
+- asynchronous events for post-donation campaign and user total updates
 
 ## 11. Implementation Details
 
@@ -716,13 +835,13 @@ This project is designed for local deployment only. All components run on the sa
 
 ### 12.4 Environment Configuration
 
-Create a root `.env` file:
+The project uses environment variables from a root `.env` file. A local configuration can follow this structure:
 
 ```env
 MONGO_URI=mongodb://127.0.0.1:27017/crowdfunding
 PORT=5000
 VITE_API_URL=http://localhost:5000
-SESSION_SECRET=your-session-secret
+SESSION_SECRET=cf-session-secret
 REDIS_URL=redis://127.0.0.1:6379
 RABBITMQ_URL=amqp://localhost
 USER_SERVICE_URL=http://localhost:5001
@@ -740,14 +859,16 @@ npm install
 Option 1:
 
 ```bash
-npm start
+npm run microservices
 ```
 
-Option 2 on Windows:
+Option 2:
 
 ```bat
 start-all.bat
 ```
+
+Note: `npm run microservices` is the preferred startup command when using the root `.env` file. The `start-all.bat` script starts each service from its own folder, so root `.env` values may need to be supplied as shell-level environment variables unless the default local configuration is enough.
 
 ### 12.7 Typical Local Startup Sequence
 
@@ -755,7 +876,7 @@ start-all.bat
 2. Start Redis.
 3. Start RabbitMQ.
 4. Run `npm install` if dependencies are not installed.
-5. Run `npm start`.
+5. Run `npm run microservices`.
 6. Open `http://localhost:5173`.
 
 ### 12.8 PlantUML Deployment Diagram
@@ -766,14 +887,14 @@ title Local Deployment Diagram
 
 node "Developer Machine" {
   artifact "Browser" as Browser
-  artifact "React Frontend\nlocalhost:5173" as FE
-  artifact "API Gateway\nlocalhost:5000" as GW
-  artifact "User Service\nlocalhost:5001" as US
-  artifact "Campaign Service\nlocalhost:5002" as CS
-  artifact "Payment Service\nlocalhost:5003" as PS
-  database "MongoDB\nlocalhost:27017" as MDB
-  queue "RabbitMQ\nlocalhost:5672" as RB
-  collections "Redis\nlocalhost:6379" as RD
+  artifact "React Frontend\n:5173" as FE
+  artifact "API Gateway\n:5000" as GW
+  artifact "User Service\n:5001" as US
+  artifact "Campaign Service\n:5002" as CS
+  artifact "Payment Service\n:5003" as PS
+  database "MongoDB\n:27017" as MDB
+  queue "RabbitMQ\n:5672" as MQ
+  collections "Redis\n:6379" as RD
 }
 
 Browser --> FE
@@ -781,15 +902,15 @@ FE --> GW
 GW --> US
 GW --> CS
 GW --> PS
-US --> MDB
-CS --> MDB
-PS --> MDB
-US --> RD
-CS --> RD
-PS --> RD
-PS --> RB
-RB --> CS
-RB --> US
+US <--> MDB
+CS <--> MDB
+PS <--> MDB
+US <--> RD
+CS <--> RD
+PS <--> RD
+US <--> MQ
+CS <--> MQ
+PS <--> MQ
 
 @enduml
 ```
@@ -806,21 +927,96 @@ The project can be extended further with stronger authentication, password hashi
 
 ```text
 CROWD-FUNDING-APPLICATION/
+|- .env
+|- .gitattributes
+|- .gitignore
+|- eslint.config.js
+|- index.html
 |- microservices/
 |  |- api-gateway/
-|  |- user-service/
+|  |  |- server.js
 |  |- campaign-service/
+|  |  |- config/
+|  |  |  |- db.js
+|  |  |- models/
+|  |  |  |- Campaign.js
+|  |  |- routes/
+|  |  |  |- campaigns.js
+|  |  |- services/
+|  |  |  |- campaignService.js
+|  |  |- rabbitmq.js
+|  |  |- redis.js
+|  |  |- seedAdmin.js
+|  |  |- server.js
 |  |- payment-service/
+|  |  |- config/
+|  |  |  |- db.js
+|  |  |- models/
+|  |  |  |- Donation.js
+|  |  |  |- Payment.js
+|  |  |- routes/
+|  |  |  |- donations.js
+|  |  |  |- payments.js
+|  |  |- utils/
+|  |  |  |- generateTransactionNumber.js
+|  |  |- rabbitmq.js
+|  |  |- redis.js
+|  |  |- seedAdmin.js
+|  |  |- server.js
+|  |- user-service/
+|  |  |- config/
+|  |  |  |- db.js
+|  |  |- models/
+|  |  |  |- User.js
+|  |  |- routes/
+|  |  |  |- auth.js
+|  |  |  |- users.js
+|  |  |- services/
+|  |  |  |- userService.js
+|  |  |- rabbitmq.js
+|  |  |- redis.js
+|  |  |- seedAdmin.js
+|  |  |- server.js
+|- package-lock.json
+|- package.json
+|- README.md
 |- src/
 |  |- assets/
+|  |  |- image.png
+|  |  |- image2.png
+|  |  |- image3.png
+|  |  |- image4.png
 |  |- Components/
+|  |  |- CampaignCard.css
+|  |  |- CampaignCard.jsx
+|  |  |- Navbar.css
+|  |  |- Navbar.jsx
+|  |  |- ProgressBar.jsx
+|  |  |- ProtectedRoute.jsx
 |  |- context/
+|  |  |- AuthContext.jsx
+|  |  |- CampaignContext.jsx
 |  |- pages/
+|  |  |- Admin.css
+|  |  |- Admin.jsx
+|  |  |- Auth.css
+|  |  |- Auth.jsx
+|  |  |- Campaign.jsx
+|  |  |- Dashboard.css
+|  |  |- Dashboard.jsx
+|  |  |- Donate.jsx
+|  |  |- Explore.css
+|  |  |- Explore.jsx
+|  |  |- Home.css
+|  |  |- Home.jsx
+|  |  |- Payment.css
+|  |  |- Payment.jsx
 |  |- services/
-|- .env
-|- package.json
+|  |  |- campaignService.js
+|  |- App.jsx
+|  |- main.jsx
 |- start-all.bat
-|- README.md
+|- vite.config.js
 ```
 
 ## Appendix B: Important Notes About the Current Implementation
@@ -830,3 +1026,4 @@ CROWD-FUNDING-APPLICATION/
 - Service addresses are hardcoded to localhost in several backend calls.
 - CORS is currently configured for `http://localhost:5173`.
 - Redis and RabbitMQ improve the design, but the application also contains fallback behavior to keep local execution simple.
+- The payment flow simulates successful payment records rather than integrating a real external payment gateway.

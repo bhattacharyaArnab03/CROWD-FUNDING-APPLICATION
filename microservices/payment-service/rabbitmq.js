@@ -1,8 +1,11 @@
 
+
 import amqp from "amqplib";
 
 let channel = null;
 let processedDonations = 0;
+let ackedDonations = 0;
+let nackedDonations = 0;
 let confirmChannel = null;
 let connection = null;
 
@@ -11,41 +14,68 @@ const DONATION_QUEUE = "donations_queue"; // Moved to top-level scope for global
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost";
 
-export const connectRabbitMQ = async () => {
-    try {
-        connection = await amqp.connect(RABBITMQ_URL);
-        // Regular channel for consuming (if needed)
-        channel = await connection.createChannel();
-        // Confirm channel for reliable publishing
-        confirmChannel = await connection.createConfirmChannel();
-        await confirmChannel.assertExchange("donations_exchange", "topic", { durable: true });
-        await channel.assertExchange("users_exchange", "topic", { durable: true });
-        // User registration event subscription
-        await channel.assertQueue(USER_REGISTERED_QUEUE, { durable: true });
-        await channel.bindQueue(USER_REGISTERED_QUEUE, "users_exchange", "user.registered");
-        channel.consume(USER_REGISTERED_QUEUE, async (msg) => {
-            if (msg !== null) {
-                try {
-                    const eventData = JSON.parse(msg.content.toString());
-                    // TODO: Implement user payment profile initialization logic here
-                    console.log("[Payment Service][RabbitMQ] Received user.registered event:", eventData);
-                    channel.ack(msg);
-                } catch (e) {
-                    console.error("[Payment Service][RabbitMQ] Invalid user.registered message, dropping.");
-                    channel.nack(msg, false, false);
+async function connectRabbitMQWithRetry() {
+    while (true) {
+        try {
+            connection = await amqp.connect(RABBITMQ_URL);
+            channel = await connection.createChannel();
+            confirmChannel = await connection.createConfirmChannel();
+            await confirmChannel.assertExchange("donations_exchange", "topic", { durable: true });
+            await channel.assertExchange("users_exchange", "topic", { durable: true });
+            // User registration event subscription
+            await channel.assertQueue(USER_REGISTERED_QUEUE, { durable: true });
+            await channel.bindQueue(USER_REGISTERED_QUEUE, "users_exchange", "user.registered");
+            channel.consume(USER_REGISTERED_QUEUE, async (msg) => {
+                if (msg !== null) {
+                    try {
+                        const eventData = JSON.parse(msg.content.toString());
+                        // TODO: Implement user payment profile initialization logic here
+                        console.log("[Payment Service][RabbitMQ] Received user.registered event:", eventData);
+                        channel.ack(msg);
+                        ackedDonations++;
+                    } catch (e) {
+                        console.error("[Payment Service][RabbitMQ] Invalid user.registered message, dropping.");
+                        channel.nack(msg, false, false);
+                        nackedDonations++;
+                    }
                 }
-            }
-        });
+            });
 
-        // Show queue length and processed count for donations
-        await showDonationQueueStats();
-        setInterval(showDonationQueueStats, 5000); // Update every 5 seconds
+            // Show queue length and processed count for donations
+            await showDonationQueueStats();
+            setInterval(showDonationQueueStats, 5000); // Update every 5 seconds
 
-        console.log("[Payment Service][RabbitMQ] Connected to RabbitMQ successfully");
-    } catch (error) {
-        console.error("[Payment Service][RabbitMQ] Connection error. Will fallback to synchronous HTTP (Axios)", error.message);
+            console.log("[Payment Service][RabbitMQ] Connected to RabbitMQ successfully");
+
+            connection.on("close", () => {
+                console.warn("[Payment Service][RabbitMQ] Connection closed. Attempting to reconnect...");
+                reconnectRabbitMQ();
+            });
+            connection.on("error", (err) => {
+                console.error("[Payment Service][RabbitMQ] Connection error:", err.message);
+            });
+            break;
+        } catch (error) {
+            console.error("[Payment Service][RabbitMQ] Connection failed, retrying in 5s:", error.message);
+            await new Promise((res) => setTimeout(res, 5000));
+        }
     }
-};
+}
+
+async function reconnectRabbitMQ() {
+    let reconnected = false;
+    while (!reconnected) {
+        try {
+            await connectRabbitMQWithRetry();
+            console.log("[Payment Service][RabbitMQ] Reconnected successfully");
+            reconnected = true;
+        } catch {
+            await new Promise((res) => setTimeout(res, 5000));
+        }
+    }
+}
+
+export const connectRabbitMQ = connectRabbitMQWithRetry;
 
 // Donation queue stats function now uses top-level DONATION_QUEUE
 async function showDonationQueueStats() {
@@ -54,7 +84,9 @@ async function showDonationQueueStats() {
         // Ensure the queue exists before checking
         await channel.assertQueue(DONATION_QUEUE, { durable: true });
         const q = await channel.checkQueue(DONATION_QUEUE);
-        console.log(`[Payment Service][RabbitMQ] [Queue] '${DONATION_QUEUE}': ${q.messageCount} in queue, ${processedDonations} processed.`);
+        if (q.messageCount > 0 || ackedDonations > 0 || nackedDonations > 0) {
+            console.log(`[Payment Service][RabbitMQ] [Queue] '${DONATION_QUEUE}': ${q.messageCount} in queue, ${processedDonations} processed, ${ackedDonations} acknowledged, ${nackedDonations} not acknowledged.`);
+        }
     } catch (e) {
         // Only log if queue doesn't exist
         if (e && e.message && !e.message.includes('NOT_FOUND')) {
