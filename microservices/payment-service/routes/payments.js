@@ -36,11 +36,12 @@ router.post("/", async (req, res) => {
       campaignId,
     });
     const savedPayment = await payment.save();
+    console.log("[Payment Service] Payment completed:", savedPayment);
     res.status(201).json(savedPayment);
   } 
   catch (err) {
-    console.error(err);
-    res.status(400).json({ message: "Payment creation failed.", error: err.message });
+    console.error("Payment Error:", err);
+    res.status(500).json({ error: "An unexpected error occurred while processing your donation." });
   }
 });
 

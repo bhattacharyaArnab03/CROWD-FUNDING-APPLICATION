@@ -5,7 +5,7 @@ const CampaignContext = createContext();
 
 export const CampaignProvider = ({ children }) => {
   const [campaigns, setCampaigns] = useState([]);
-
+  const [donations, setDonations] = useState([]);
 
   // Fetch campaigns using the service
   const fetchCampaigns = useCallback(async () => {
@@ -13,11 +13,30 @@ export const CampaignProvider = ({ children }) => {
     setCampaigns(data);
   }, []);
 
-  // Expose all service functions, campaigns state, and fetchCampaigns
+  // Fetch donation history
+  const fetchDonationHistory = useCallback(async () => {
+    const data = await campaignService.getDonationHistory();
+    setDonations(data);
+    return data;
+  }, []);
+
+  // Wrap donateToCampaign to refresh campaigns and donations immediately
+  const donateToCampaign = useCallback(async (id, amount, user) => {
+    const result = await campaignService.donateToCampaign(id, amount, user);
+    await fetchCampaigns();
+    await fetchDonationHistory();
+    return result;
+  }, [fetchCampaigns, fetchDonationHistory]);
+
+  // Expose all service functions, campaigns state, fetchCampaigns, and donation state
   const value = {
     campaigns,
     setCampaigns,
     fetchCampaigns,
+    donations,
+    setDonations,
+    fetchDonationHistory,
+    donateToCampaign,
     ...campaignService,
   };
 

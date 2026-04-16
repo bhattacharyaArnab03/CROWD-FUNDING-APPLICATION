@@ -1,11 +1,15 @@
 
+
 import { useEffect, useState } from "react";
 import { useCampaign } from "../context/CampaignContext";
 import "./Admin.css";
 import CampaignCard from "../Components/CampaignCard";
 
-function Admin() {
-  const { campaigns, fetchCampaigns, createCampaign, updateCampaign, getDonationHistory } = useCampaign();
+
+const Admin = () => {
+  const { campaigns, fetchCampaigns, createCampaign, updateCampaign, donations, fetchDonationHistory } = useCampaign();
+  // Defensive: ensure donations is always an array
+  const safeDonationHistory = Array.isArray(donations) ? donations : [];
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
   const [description, setDescription] = useState("");
@@ -21,7 +25,6 @@ function Admin() {
   const [editRaised, setEditRaised] = useState("");
 
   const [editError, setEditError] = useState("");
-  const [donationHistory, setDonationHistory] = useState([]);
   const [historyError, setHistoryError] = useState("");
   const [activeTab, setActiveTab] = useState("create");
 
@@ -87,12 +90,13 @@ function Admin() {
     setEditError("");
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const data = await getDonationHistory();
-        setDonationHistory(data);
+        await fetchDonationHistory();
       } catch {
         setHistoryError("Unable to load donation history.");
       }
@@ -141,7 +145,7 @@ function Admin() {
 
       {/* HERO */}
       <div className="admin-hero">
-        <h1>Admin Dashboard</h1>
+        <h1 style={{ marginTop: '5rem' }}>Admin Dashboard</h1>
         <p>Create and manage fundraising campaigns</p>
       </div>
 
@@ -157,14 +161,14 @@ function Admin() {
           <button
             type="button"
             className={activeTab === "campaigns" ? "admin-tab active" : "admin-tab"}
-            onClick={() => setActiveTab("campaigns")}
+            onClick={() => { setActiveTab("campaigns"); setCurrentPage(1); }}
           >
             Campaign Details
           </button>
           <button
             type="button"
             className={activeTab === "transactions" ? "admin-tab active" : "admin-tab"}
-            onClick={() => setActiveTab("transactions")}
+            onClick={() => { setActiveTab("transactions"); setCurrentPage(1); }}
           >
             Transaction Details
           </button>
@@ -288,37 +292,58 @@ function Admin() {
           <div className="history-section">
             <h2>Donation History</h2>
             {historyError && <p className="admin-error">{historyError}</p>}
-            {donationHistory.length === 0 ? (
+            {safeDonationHistory.length === 0 ? (
               <p>No donations have been recorded yet.</p>
             ) : (
-              <div className="history-table-wrapper">
-                <table className="history-table">
-                  <thead>
-                    <tr>
-                      <th>Txn #</th>
-                      <th>Email</th>
-                      <th>Username</th>
-                      <th>Amount</th>
-                      <th>Campaign</th>
-                      <th>Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...donationHistory]
-                      .sort((a, b) => new Date(b.donatedAt) - new Date(a.donatedAt))
-                      .map((donation) => (
-                        <tr key={donation._id || donation.transactionNumber}>
-                          <td>{donation.transactionNumber}</td>
-                          <td>{donation.donorEmail}</td>
-                          <td>{donation.donorName}</td>
-                          <td>₹{donation.amount}</td>
-                          <td>{donation.campaignName}</td>
-                          <td>{new Date(donation.donatedAt).toLocaleString()}</td>
-                        </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="history-table-wrapper">
+                  <table className="history-table">
+                    <thead>
+                      <tr>
+                        <th>Txn #</th>
+                        <th>Email</th>
+                        <th>Username</th>
+                        <th>Amount</th>
+                        <th>Campaign</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...safeDonationHistory]
+                        .sort((a, b) => new Date(b.donatedAt) - new Date(a.donatedAt))
+                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                        .map((donation) => (
+                          <tr key={donation._id || donation.transactionNumber}>
+                            <td>{donation.transactionNumber}</td>
+                            <td>{donation.donorEmail}</td>
+                            <td>{donation.donorName}</td>
+                            <td>₹{donation.amount}</td>
+                            <td>{donation.campaignName}</td>
+                            <td>{donation.donatedAt ? new Date(donation.donatedAt).toLocaleString() : "-"}</td>
+                          </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Pagination Controls */}
+                {Math.ceil(safeDonationHistory.length / itemsPerPage) > 1 && (
+                  <div className="pagination">
+                    <button 
+                      disabled={currentPage === 1} 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    >
+                      Previous
+                    </button>
+                    <span>Page {currentPage} of {Math.ceil(safeDonationHistory.length / itemsPerPage)}</span>
+                    <button 
+                      disabled={currentPage === Math.ceil(safeDonationHistory.length / itemsPerPage)} 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(safeDonationHistory.length / itemsPerPage)))}
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         ) : null}

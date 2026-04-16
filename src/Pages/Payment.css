@@ -26,6 +26,28 @@
   border: 1px solid #e2e8f0;
 }
 
+.receipt {
+  position: relative;
+}
+
+.close-receipt-btn {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  background: transparent !important;
+  color: red !important;
+  font-size: 32px;
+  width: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: pointer;
+  border: none;
+  font-weight: bold;
+}
+.close-receipt-btn:hover {
+  color: darkred !important;
+}
+
 .payment-card button {
   width: 100%;
   padding: 12px;

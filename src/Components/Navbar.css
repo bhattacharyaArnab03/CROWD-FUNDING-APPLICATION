@@ -3,11 +3,17 @@
   justify-content: space-between;
   align-items: center;
   padding: 18px 60px;
-  background-color: #0f172a;   /* Professional deep navy */
+  background-color: #0f172a;   
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  z-index: 50;
+  box-sizing: border-box;
 }
 
-/* Logo */
+
 .logo {
   font-size: 24px;
   font-weight: 800;
@@ -15,7 +21,7 @@
   letter-spacing: 1px;
 }
 
-/* Links */
+
 .nav-links a {
   margin-left: 35px;
   text-decoration: none;
@@ -26,12 +32,12 @@
   position: relative;
 }
 
-/* Hover color */
+
 .nav-links a:hover {
-  color: #38bdf8;  /* Elegant cyan accent */
+  color: #38bdf8;  
 }
 
-/* Animated underline */
+
 .nav-links a::after {
   content: "";
   position: absolute;
@@ -47,7 +53,7 @@
   width: 100%;
 }
 
-/* AUTH BUTTON */
+
 .auth-btn-nav {
   margin-left: 35px;
   padding: 10px 22px;

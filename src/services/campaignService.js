@@ -1,3 +1,8 @@
+// Check if user is new (event consumed)
+export function getIsNewUser(userId) {
+  // Note: campaign-service runs on 5002
+  return axios.get(`http://localhost:5002/api/user-status/is-new/${userId}`).then(res => res.data);
+}
 import axios from "axios";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";

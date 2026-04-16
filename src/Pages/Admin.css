@@ -5,7 +5,7 @@
     linear-gradient(to bottom, #0f172a 0%, #e2e8f0 45%);
 }
 
-/* HERO */
+
 .admin-hero {
   padding: 32px 20px 100px;
   text-align: center;
@@ -24,7 +24,7 @@
   font-weight: 500;
 }
 
-/* CONTAINER */
+
 .admin-container {
   padding: 0 80px 80px;
   margin-top: -60px;
@@ -58,7 +58,7 @@
 }
 
 
-/* CREATE CARD */
+
 .create-section {
   display: flex;
   justify-content: center;
@@ -110,14 +110,14 @@
 }
 
 
-/* GRID */
+
 .admin-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 30px;
 }
 
-/* CARD */
+
 .admin-card {
   background: white;
   padding: 25px;
@@ -169,7 +169,7 @@
   color: #94a3b8;
 }
 
-/* PROGRESS */
+
 .progress-bar {
   height: 8px;
   background: #e2e8f0;
@@ -190,7 +190,7 @@
   margin-bottom: 15px;
 }
 
-/* ACTIONS */
+
 .card-actions {
   display: flex;
   gap: 10px;
@@ -246,6 +246,32 @@
 
 .history-table tbody tr:hover {
   background: #f8fafc;
+}
+
+
+.pagination {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+.pagination button {
+  padding: 8px 16px;
+  border-radius: 5px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.pagination button:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+.pagination span {
+  font-weight: 600;
+  color: #1e293b;
 }
 
 .save-btn {
